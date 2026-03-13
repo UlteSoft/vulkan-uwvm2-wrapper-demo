@@ -106,6 +106,12 @@ char const *const kLibraryCandidates[] = {
     "libvulkan.1.dylib",
     "libvulkan.dylib",
     "libMoltenVK.dylib",
+    "/opt/homebrew/lib/libvulkan.1.dylib",
+    "/opt/homebrew/lib/libvulkan.dylib",
+    "/opt/homebrew/lib/libMoltenVK.dylib",
+    "/usr/local/lib/libvulkan.1.dylib",
+    "/usr/local/lib/libvulkan.dylib",
+    "/usr/local/lib/libMoltenVK.dylib",
 #else
     "libvulkan.so.1",
     "libvulkan.so",

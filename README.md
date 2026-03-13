@@ -55,6 +55,9 @@ src/
   uwvm2_vulkan/
   vulkan/
 
+examples/
+  wasm32-wasip1-vulkan-smoke/
+
 test/
   guest_header_smoke.c
   memory_access_test.cc
@@ -139,6 +142,15 @@ The guest headers are intended for WebAssembly-side code:
   Defines the guest-visible Vulkan wrapper ABI structs and constants.
 - [`include/uwvm2_vulkan/vulkan.h`](include/uwvm2_vulkan/vulkan.h)
   Declares the imported wrapper entry points exposed through the UWVM2 Vulkan module.
+
+## Examples
+
+A standalone wasm guest example lives in:
+
+- [`examples/wasm32-wasip1-vulkan-smoke/README.md`](examples/wasm32-wasip1-vulkan-smoke/README.md)
+
+It demonstrates compiling a `.cc` file directly to `wasm32-wasip1` with `clang++`,
+then running it through `uwvm2` with the preload-DL plugin form.
 
 ## Integration Model
 
