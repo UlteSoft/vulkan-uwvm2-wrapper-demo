@@ -7,6 +7,7 @@ It provides:
 - a preload dynamic-library implementation for UWVM2
 - a weak-symbol registration form for ELF-style integration
 - a stable memory-access layer that handles every currently documented UWVM2 preload memory delivery mode
+- a plugin-facing WASI Preview 1 capability bridge that can reuse the guest's UWVM2 rights-scoped environment for file-system operations
 
 The project is organized as a derivative-style companion repository rather than a monolithic part of the main `uwvm2` tree.
 
@@ -21,6 +22,13 @@ The codebase already includes:
 - dynamic Vulkan loader dispatch
 - physical-device feature and extension queries
 - device and queue idle synchronization entry points
+- command pool creation, reset, and destruction
+- command buffer allocation, free, begin, end, and reset entry points
+- shader module creation and destruction
+- semaphore and fence synchronization primitives
+- buffer and image resource lifecycle wrappers
+- buffer/image memory requirement and memory binding wrappers
+- plugin-side reuse of the exported UWVM2 WASI Preview 1 host API for capability-scoped file access
 - guest-memory adaptation for:
   - `none`
   - `copy`
@@ -51,6 +59,8 @@ test/
   guest_header_smoke.c
   memory_access_test.cc
   module_registry_test.cc
+  wasi_file_system_test.cc
+  vulkan_api_test.cc
 
 xmake/
   impl.lua
@@ -137,11 +147,12 @@ The guest headers are intended for WebAssembly-side code:
 The preload-DL form exports:
 
 - `uwvm_set_preload_host_api_v1`
+- `uwvm_set_wasip1_host_api_v1`
 - `uwvm_get_module_name`
 - `uwvm_get_custom_handler`
 - `uwvm_function`
 
-This is the preferred route when the wrapper needs the stable preload host API for memory access.
+This is the preferred route when the wrapper needs the stable preload host API for memory access and the plugin-facing WASI Preview 1 host API for rights-scoped filesystem reuse.
 
 ### Weak symbol registration
 
@@ -149,7 +160,18 @@ The weak-symbol form exports:
 
 - `uwvm_weak_symbol_module`
 
-This is mainly intended for ELF-style environments where weak symbol integration is a natural fit.
+The weak-symbol module descriptor also carries both host-API setter callbacks so the runtime can inject preload-memory access and WASI capability state in the same style as native UWVM2 derivative modules.
+
+## WASI Capability Reuse
+
+The wrapper does not treat the host process as its filesystem authority.
+When filesystem-oriented helper code is needed inside the plugin, it is expected to go through the plugin-facing `uwvm_wasip1_host_api_v1` surface exposed by UWVM2.
+
+That means:
+
+- path and descriptor operations can be constrained by the same WASI rights/capability model granted to the guest module
+- plugins can reuse preopened directories and rights already configured by the embedding UWVM2 runtime
+- wrapper-side file access can remain aligned with guest-visible capability boundaries instead of silently inheriting unrestricted host-process permissions
 
 ## Memory Delivery Compatibility
 
@@ -172,6 +194,7 @@ Current local validation targets:
 
 - `memory_access_test`
 - `module_registry_test`
+- `wasi_file_system_test`
 - `vulkan_api_test`
 - `guest_header_smoke`
 
@@ -180,6 +203,7 @@ Run the tests after building:
 ```bash
 ./build/<plat>/<arch>/<mode>/memory_access_test
 ./build/<plat>/<arch>/<mode>/module_registry_test
+./build/<plat>/<arch>/<mode>/wasi_file_system_test
 ./build/<plat>/<arch>/<mode>/vulkan_api_test
 ```
 

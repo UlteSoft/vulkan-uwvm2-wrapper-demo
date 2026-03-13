@@ -91,6 +91,11 @@ enum {
 };
 
 enum {
+  UWVM_VK_COMMAND_BUFFER_LEVEL_PRIMARY = 0,
+  UWVM_VK_COMMAND_BUFFER_LEVEL_SECONDARY = 1
+};
+
+enum {
   UWVM_VK_SAMPLE_COUNT_1_BIT = 0x00000001u,
   UWVM_VK_SAMPLE_COUNT_2_BIT = 0x00000002u,
   UWVM_VK_SAMPLE_COUNT_4_BIT = 0x00000004u,
@@ -98,6 +103,29 @@ enum {
   UWVM_VK_SAMPLE_COUNT_16_BIT = 0x00000010u,
   UWVM_VK_SAMPLE_COUNT_32_BIT = 0x00000020u,
   UWVM_VK_SAMPLE_COUNT_64_BIT = 0x00000040u
+};
+
+enum {
+  UWVM_VK_COMMAND_POOL_CREATE_TRANSIENT_BIT = 0x00000001u,
+  UWVM_VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT = 0x00000002u
+};
+
+enum {
+  UWVM_VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT = 0x00000001u
+};
+
+enum {
+  UWVM_VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT = 0x00000001u,
+  UWVM_VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT = 0x00000002u,
+  UWVM_VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT = 0x00000004u
+};
+
+enum {
+  UWVM_VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT = 0x00000001u
+};
+
+enum {
+  UWVM_VK_FENCE_CREATE_SIGNALED_BIT = 0x00000001u
 };
 
 typedef struct UWVM2_VULKAN_PACKED uwvm_vk_string_view {
@@ -290,6 +318,44 @@ typedef struct UWVM2_VULKAN_PACKED uwvm_vk_memory_requirements {
   uint32_t memory_type_bits;
   uint32_t reserved;
 } uwvm_vk_memory_requirements;
+
+typedef struct UWVM2_VULKAN_PACKED uwvm_vk_semaphore_create_info {
+  uint32_t flags;
+  uint32_t reserved0;
+  uint64_t reserved1;
+} uwvm_vk_semaphore_create_info;
+
+typedef struct UWVM2_VULKAN_PACKED uwvm_vk_fence_create_info {
+  uint32_t flags;
+  uint32_t reserved0;
+  uint64_t reserved1;
+} uwvm_vk_fence_create_info;
+
+typedef struct UWVM2_VULKAN_PACKED uwvm_vk_command_pool_create_info {
+  uint32_t flags;
+  uint32_t queue_family_index;
+  uint64_t reserved0;
+} uwvm_vk_command_pool_create_info;
+
+typedef struct UWVM2_VULKAN_PACKED uwvm_vk_command_buffer_allocate_info {
+  uwvm_vk_handle_t command_pool_handle;
+  uint32_t level;
+  uint32_t command_buffer_count;
+  uint64_t reserved0;
+} uwvm_vk_command_buffer_allocate_info;
+
+typedef struct UWVM2_VULKAN_PACKED uwvm_vk_command_buffer_begin_info {
+  uint32_t flags;
+  uint32_t reserved0;
+  uint64_t reserved1;
+} uwvm_vk_command_buffer_begin_info;
+
+typedef struct UWVM2_VULKAN_PACKED uwvm_vk_shader_module_create_info {
+  uint32_t flags;
+  uint32_t reserved0;
+  uint64_t code_size;
+  uint64_t code_address;
+} uwvm_vk_shader_module_create_info;
 
 typedef struct UWVM2_VULKAN_PACKED uwvm_vk_memory_allocate_info {
   uint64_t allocation_size;

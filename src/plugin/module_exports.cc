@@ -71,6 +71,12 @@ struct UWVM2_VULKAN_PACKED four_u64_param {
   std::uint64_t a3;
 };
 
+struct UWVM2_VULKAN_PACKED two_u64_one_u32_param {
+  std::uint64_t a0;
+  std::uint64_t a1;
+  std::uint32_t a2;
+};
+
 struct UWVM2_VULKAN_PACKED enumerate_extension_param {
   std::uint64_t layer_name_address;
   std::uint64_t property_buffer_address;
@@ -106,6 +112,20 @@ struct UWVM2_VULKAN_PACKED get_queue_param {
   std::uint64_t out_queue_address;
 };
 
+struct UWVM2_VULKAN_PACKED wait_for_fences_param {
+  std::uint64_t device_handle;
+  std::uint64_t fence_handle_buffer_address;
+  std::uint32_t fence_count;
+  std::uint32_t wait_all;
+  std::uint64_t timeout_nanoseconds;
+};
+
+struct UWVM2_VULKAN_PACKED reset_fences_param {
+  std::uint64_t device_handle;
+  std::uint64_t fence_handle_buffer_address;
+  std::uint32_t fence_count;
+};
+
 struct UWVM2_VULKAN_PACKED destroy_buffer_param {
   std::uint64_t device_handle;
   std::uint64_t buffer_handle;
@@ -116,6 +136,13 @@ struct UWVM2_VULKAN_PACKED bind_buffer_memory_param {
   std::uint64_t buffer_handle;
   std::uint64_t memory_handle;
   std::uint64_t offset;
+};
+
+struct UWVM2_VULKAN_PACKED free_command_buffers_param {
+  std::uint64_t device_handle;
+  std::uint64_t command_pool_handle;
+  std::uint64_t command_buffer_handle_buffer_address;
+  std::uint32_t command_buffer_count;
 };
 
 void loader_available_entry(unsigned char *result_bytes,
@@ -251,6 +278,141 @@ void queue_wait_idle_entry(unsigned char *result_bytes,
   StoreI32Result(result_bytes, api::QueueWaitIdle(parameter.a0));
 }
 
+void create_command_pool_entry(unsigned char *result_bytes,
+                               unsigned char *parameter_bytes) noexcept {
+  auto const parameter{LoadParameter<three_u64_param>(parameter_bytes)};
+  StoreI32Result(result_bytes, api::CreateCommandPool(parameter.a0,
+                                                      parameter.a1,
+                                                      parameter.a2));
+}
+
+void destroy_command_pool_entry(unsigned char *result_bytes,
+                                unsigned char *parameter_bytes) noexcept {
+  auto const parameter{LoadParameter<destroy_buffer_param>(parameter_bytes)};
+  StoreI32Result(result_bytes,
+                 api::DestroyCommandPool(parameter.device_handle,
+                                         parameter.buffer_handle));
+}
+
+void reset_command_pool_entry(unsigned char *result_bytes,
+                              unsigned char *parameter_bytes) noexcept {
+  auto const parameter{LoadParameter<two_u64_one_u32_param>(parameter_bytes)};
+  StoreI32Result(result_bytes,
+                 api::ResetCommandPool(parameter.a0, parameter.a1,
+                                       parameter.a2));
+}
+
+void allocate_command_buffers_entry(unsigned char *result_bytes,
+                                    unsigned char *parameter_bytes) noexcept {
+  auto const parameter{LoadParameter<three_u64_param>(parameter_bytes)};
+  StoreI32Result(result_bytes,
+                 api::AllocateCommandBuffers(parameter.a0, parameter.a1,
+                                             parameter.a2));
+}
+
+void free_command_buffers_entry(unsigned char *result_bytes,
+                                unsigned char *parameter_bytes) noexcept {
+  auto const parameter{
+      LoadParameter<free_command_buffers_param>(parameter_bytes)};
+  StoreI32Result(result_bytes, api::FreeCommandBuffers(
+                                   parameter.device_handle,
+                                   parameter.command_pool_handle,
+                                   parameter.command_buffer_handle_buffer_address,
+                                   parameter.command_buffer_count));
+}
+
+void begin_command_buffer_entry(unsigned char *result_bytes,
+                                unsigned char *parameter_bytes) noexcept {
+  auto const parameter{LoadParameter<three_u64_param>(parameter_bytes)};
+  StoreI32Result(result_bytes,
+                 api::BeginCommandBuffer(parameter.a0, parameter.a1,
+                                         parameter.a2));
+}
+
+void end_command_buffer_entry(unsigned char *result_bytes,
+                              unsigned char *parameter_bytes) noexcept {
+  auto const parameter{LoadParameter<two_u64_param>(parameter_bytes)};
+  StoreI32Result(result_bytes,
+                 api::EndCommandBuffer(parameter.a0, parameter.a1));
+}
+
+void reset_command_buffer_entry(unsigned char *result_bytes,
+                                unsigned char *parameter_bytes) noexcept {
+  auto const parameter{LoadParameter<two_u64_one_u32_param>(parameter_bytes)};
+  StoreI32Result(result_bytes,
+                 api::ResetCommandBuffer(parameter.a0, parameter.a1,
+                                         parameter.a2));
+}
+
+void create_shader_module_entry(unsigned char *result_bytes,
+                                unsigned char *parameter_bytes) noexcept {
+  auto const parameter{LoadParameter<three_u64_param>(parameter_bytes)};
+  StoreI32Result(result_bytes, api::CreateShaderModule(parameter.a0,
+                                                       parameter.a1,
+                                                       parameter.a2));
+}
+
+void destroy_shader_module_entry(unsigned char *result_bytes,
+                                 unsigned char *parameter_bytes) noexcept {
+  auto const parameter{LoadParameter<destroy_buffer_param>(parameter_bytes)};
+  StoreI32Result(result_bytes, api::DestroyShaderModule(parameter.device_handle,
+                                                        parameter.buffer_handle));
+}
+
+void create_semaphore_entry(unsigned char *result_bytes,
+                            unsigned char *parameter_bytes) noexcept {
+  auto const parameter{LoadParameter<three_u64_param>(parameter_bytes)};
+  StoreI32Result(result_bytes, api::CreateSemaphore(parameter.a0, parameter.a1,
+                                                    parameter.a2));
+}
+
+void destroy_semaphore_entry(unsigned char *result_bytes,
+                             unsigned char *parameter_bytes) noexcept {
+  auto const parameter{LoadParameter<destroy_buffer_param>(parameter_bytes)};
+  StoreI32Result(result_bytes, api::DestroySemaphore(parameter.device_handle,
+                                                     parameter.buffer_handle));
+}
+
+void create_fence_entry(unsigned char *result_bytes,
+                        unsigned char *parameter_bytes) noexcept {
+  auto const parameter{LoadParameter<three_u64_param>(parameter_bytes)};
+  StoreI32Result(result_bytes,
+                 api::CreateFence(parameter.a0, parameter.a1, parameter.a2));
+}
+
+void destroy_fence_entry(unsigned char *result_bytes,
+                         unsigned char *parameter_bytes) noexcept {
+  auto const parameter{LoadParameter<destroy_buffer_param>(parameter_bytes)};
+  StoreI32Result(result_bytes, api::DestroyFence(parameter.device_handle,
+                                                 parameter.buffer_handle));
+}
+
+void get_fence_status_entry(unsigned char *result_bytes,
+                            unsigned char *parameter_bytes) noexcept {
+  auto const parameter{LoadParameter<two_u64_param>(parameter_bytes)};
+  StoreI32Result(result_bytes,
+                 api::GetFenceStatus(parameter.a0, parameter.a1));
+}
+
+void wait_for_fences_entry(unsigned char *result_bytes,
+                           unsigned char *parameter_bytes) noexcept {
+  auto const parameter{LoadParameter<wait_for_fences_param>(parameter_bytes)};
+  StoreI32Result(result_bytes, api::WaitForFences(
+                                   parameter.device_handle,
+                                   parameter.fence_handle_buffer_address,
+                                   parameter.fence_count, parameter.wait_all,
+                                   parameter.timeout_nanoseconds));
+}
+
+void reset_fences_entry(unsigned char *result_bytes,
+                        unsigned char *parameter_bytes) noexcept {
+  auto const parameter{LoadParameter<reset_fences_param>(parameter_bytes)};
+  StoreI32Result(result_bytes,
+                 api::ResetFences(parameter.device_handle,
+                                  parameter.fence_handle_buffer_address,
+                                  parameter.fence_count));
+}
+
 void create_buffer_entry(unsigned char *result_bytes,
                          unsigned char *parameter_bytes) noexcept {
   auto const parameter{LoadParameter<three_u64_param>(parameter_bytes)};
@@ -269,6 +431,27 @@ void get_buffer_memory_requirements_entry(
     unsigned char *result_bytes, unsigned char *parameter_bytes) noexcept {
   auto const parameter{LoadParameter<three_u64_param>(parameter_bytes)};
   StoreI32Result(result_bytes, api::GetBufferMemoryRequirements(
+                                   parameter.a0, parameter.a1, parameter.a2));
+}
+
+void create_image_entry(unsigned char *result_bytes,
+                        unsigned char *parameter_bytes) noexcept {
+  auto const parameter{LoadParameter<three_u64_param>(parameter_bytes)};
+  StoreI32Result(result_bytes,
+                 api::CreateImage(parameter.a0, parameter.a1, parameter.a2));
+}
+
+void destroy_image_entry(unsigned char *result_bytes,
+                         unsigned char *parameter_bytes) noexcept {
+  auto const parameter{LoadParameter<destroy_buffer_param>(parameter_bytes)};
+  StoreI32Result(result_bytes, api::DestroyImage(parameter.device_handle,
+                                                 parameter.buffer_handle));
+}
+
+void get_image_memory_requirements_entry(
+    unsigned char *result_bytes, unsigned char *parameter_bytes) noexcept {
+  auto const parameter{LoadParameter<three_u64_param>(parameter_bytes)};
+  StoreI32Result(result_bytes, api::GetImageMemoryRequirements(
                                    parameter.a0, parameter.a1, parameter.a2));
 }
 
@@ -295,6 +478,16 @@ void bind_buffer_memory_entry(unsigned char *result_bytes,
                                                      parameter.offset));
 }
 
+void bind_image_memory_entry(unsigned char *result_bytes,
+                             unsigned char *parameter_bytes) noexcept {
+  auto const parameter{
+      LoadParameter<bind_buffer_memory_param>(parameter_bytes)};
+  StoreI32Result(result_bytes, api::BindImageMemory(parameter.device_handle,
+                                                    parameter.buffer_handle,
+                                                    parameter.memory_handle,
+                                                    parameter.offset));
+}
+
 void copy_guest_to_device_memory_entry(
     unsigned char *result_bytes, unsigned char *parameter_bytes) noexcept {
   auto const parameter{LoadParameter<three_u64_param>(parameter_bytes)};
@@ -318,12 +511,20 @@ inline constexpr std::uint_least8_t kI64I64I64Types[]{
 inline constexpr std::uint_least8_t kI64I64I64I64Types[]{
     UWVM_WASM_VALTYPE_I64, UWVM_WASM_VALTYPE_I64, UWVM_WASM_VALTYPE_I64,
     UWVM_WASM_VALTYPE_I64};
+inline constexpr std::uint_least8_t kI64I64I64I32Types[]{
+    UWVM_WASM_VALTYPE_I64, UWVM_WASM_VALTYPE_I64, UWVM_WASM_VALTYPE_I64,
+    UWVM_WASM_VALTYPE_I32};
 inline constexpr std::uint_least8_t kI64I64I32I64Types[]{
     UWVM_WASM_VALTYPE_I64, UWVM_WASM_VALTYPE_I64, UWVM_WASM_VALTYPE_I32,
     UWVM_WASM_VALTYPE_I64};
 inline constexpr std::uint_least8_t kI64I64I64I32I64Types[]{
     UWVM_WASM_VALTYPE_I64, UWVM_WASM_VALTYPE_I64, UWVM_WASM_VALTYPE_I64,
     UWVM_WASM_VALTYPE_I32, UWVM_WASM_VALTYPE_I64};
+inline constexpr std::uint_least8_t kI64I64I32I32I64Types[]{
+    UWVM_WASM_VALTYPE_I64, UWVM_WASM_VALTYPE_I64, UWVM_WASM_VALTYPE_I32,
+    UWVM_WASM_VALTYPE_I32, UWVM_WASM_VALTYPE_I64};
+inline constexpr std::uint_least8_t kI64I64I32Types[]{
+    UWVM_WASM_VALTYPE_I64, UWVM_WASM_VALTYPE_I64, UWVM_WASM_VALTYPE_I32};
 inline constexpr std::uint_least8_t kI64I32I64Types[]{
     UWVM_WASM_VALTYPE_I64, UWVM_WASM_VALTYPE_I32, UWVM_WASM_VALTYPE_I64};
 inline constexpr std::uint_least8_t kI64I32I32I64Types[]{
@@ -358,13 +559,36 @@ inline constexpr char kDestroyDeviceName[]{"destroy_device"};
 inline constexpr char kDeviceWaitIdleName[]{"device_wait_idle"};
 inline constexpr char kGetDeviceQueueName[]{"get_device_queue"};
 inline constexpr char kQueueWaitIdleName[]{"queue_wait_idle"};
+inline constexpr char kCreateCommandPoolName[]{"create_command_pool"};
+inline constexpr char kDestroyCommandPoolName[]{"destroy_command_pool"};
+inline constexpr char kResetCommandPoolName[]{"reset_command_pool"};
+inline constexpr char kAllocateCommandBuffersName[]{
+    "allocate_command_buffers"};
+inline constexpr char kFreeCommandBuffersName[]{"free_command_buffers"};
+inline constexpr char kBeginCommandBufferName[]{"begin_command_buffer"};
+inline constexpr char kEndCommandBufferName[]{"end_command_buffer"};
+inline constexpr char kResetCommandBufferName[]{"reset_command_buffer"};
+inline constexpr char kCreateShaderModuleName[]{"create_shader_module"};
+inline constexpr char kDestroyShaderModuleName[]{"destroy_shader_module"};
+inline constexpr char kCreateSemaphoreName[]{"create_semaphore"};
+inline constexpr char kDestroySemaphoreName[]{"destroy_semaphore"};
+inline constexpr char kCreateFenceName[]{"create_fence"};
+inline constexpr char kDestroyFenceName[]{"destroy_fence"};
+inline constexpr char kGetFenceStatusName[]{"get_fence_status"};
+inline constexpr char kWaitForFencesName[]{"wait_for_fences"};
+inline constexpr char kResetFencesName[]{"reset_fences"};
 inline constexpr char kCreateBufferName[]{"create_buffer"};
 inline constexpr char kDestroyBufferName[]{"destroy_buffer"};
 inline constexpr char kGetBufferMemoryRequirementsName[]{
     "get_buffer_memory_requirements"};
+inline constexpr char kCreateImageName[]{"create_image"};
+inline constexpr char kDestroyImageName[]{"destroy_image"};
+inline constexpr char kGetImageMemoryRequirementsName[]{
+    "get_image_memory_requirements"};
 inline constexpr char kAllocateMemoryName[]{"allocate_memory"};
 inline constexpr char kFreeMemoryName[]{"free_memory"};
 inline constexpr char kBindBufferMemoryName[]{"bind_buffer_memory"};
+inline constexpr char kBindImageMemoryName[]{"bind_image_memory"};
 inline constexpr char kCopyGuestToDeviceMemoryName[]{
     "copy_guest_to_device_memory"};
 inline constexpr char kCopyDeviceMemoryToGuestName[]{
@@ -414,6 +638,40 @@ inline constexpr uwvm_capi_function_t kFunctions[] = {
      4u, kI32Types, 1u, get_device_queue_entry},
     {kQueueWaitIdleName, sizeof(kQueueWaitIdleName) - 1u, kI64Types, 1u,
      kI32Types, 1u, queue_wait_idle_entry},
+    {kCreateCommandPoolName, sizeof(kCreateCommandPoolName) - 1u,
+     kI64I64I64Types, 3u, kI32Types, 1u, create_command_pool_entry},
+    {kDestroyCommandPoolName, sizeof(kDestroyCommandPoolName) - 1u,
+     kI64I64Types, 2u, kI32Types, 1u, destroy_command_pool_entry},
+    {kResetCommandPoolName, sizeof(kResetCommandPoolName) - 1u,
+     kI64I64I32Types, 3u, kI32Types, 1u, reset_command_pool_entry},
+    {kAllocateCommandBuffersName, sizeof(kAllocateCommandBuffersName) - 1u,
+     kI64I64I64Types, 3u, kI32Types, 1u, allocate_command_buffers_entry},
+    {kFreeCommandBuffersName, sizeof(kFreeCommandBuffersName) - 1u,
+     kI64I64I64I32Types, 4u, kI32Types, 1u, free_command_buffers_entry},
+    {kBeginCommandBufferName, sizeof(kBeginCommandBufferName) - 1u,
+     kI64I64I64Types, 3u, kI32Types, 1u, begin_command_buffer_entry},
+    {kEndCommandBufferName, sizeof(kEndCommandBufferName) - 1u, kI64I64Types,
+     2u, kI32Types, 1u, end_command_buffer_entry},
+    {kResetCommandBufferName, sizeof(kResetCommandBufferName) - 1u,
+     kI64I64I32Types, 3u, kI32Types, 1u, reset_command_buffer_entry},
+    {kCreateShaderModuleName, sizeof(kCreateShaderModuleName) - 1u,
+     kI64I64I64Types, 3u, kI32Types, 1u, create_shader_module_entry},
+    {kDestroyShaderModuleName, sizeof(kDestroyShaderModuleName) - 1u,
+     kI64I64Types, 2u, kI32Types, 1u, destroy_shader_module_entry},
+    {kCreateSemaphoreName, sizeof(kCreateSemaphoreName) - 1u, kI64I64I64Types,
+     3u, kI32Types, 1u, create_semaphore_entry},
+    {kDestroySemaphoreName, sizeof(kDestroySemaphoreName) - 1u, kI64I64Types,
+     2u, kI32Types, 1u, destroy_semaphore_entry},
+    {kCreateFenceName, sizeof(kCreateFenceName) - 1u, kI64I64I64Types, 3u,
+     kI32Types, 1u, create_fence_entry},
+    {kDestroyFenceName, sizeof(kDestroyFenceName) - 1u, kI64I64Types, 2u,
+     kI32Types, 1u, destroy_fence_entry},
+    {kGetFenceStatusName, sizeof(kGetFenceStatusName) - 1u, kI64I64Types, 2u,
+     kI32Types, 1u, get_fence_status_entry},
+    {kWaitForFencesName, sizeof(kWaitForFencesName) - 1u,
+     kI64I64I32I32I64Types, 5u, kI32Types, 1u, wait_for_fences_entry},
+    {kResetFencesName, sizeof(kResetFencesName) - 1u, kI64I64I32Types, 3u,
+     kI32Types, 1u, reset_fences_entry},
     {kCreateBufferName, sizeof(kCreateBufferName) - 1u, kI64I64I64Types, 3u,
      kI32Types, 1u, create_buffer_entry},
     {kDestroyBufferName, sizeof(kDestroyBufferName) - 1u, kI64I64Types, 2u,
@@ -421,12 +679,21 @@ inline constexpr uwvm_capi_function_t kFunctions[] = {
     {kGetBufferMemoryRequirementsName,
      sizeof(kGetBufferMemoryRequirementsName) - 1u, kI64I64I64Types, 3u,
      kI32Types, 1u, get_buffer_memory_requirements_entry},
+    {kCreateImageName, sizeof(kCreateImageName) - 1u, kI64I64I64Types, 3u,
+     kI32Types, 1u, create_image_entry},
+    {kDestroyImageName, sizeof(kDestroyImageName) - 1u, kI64I64Types, 2u,
+     kI32Types, 1u, destroy_image_entry},
+    {kGetImageMemoryRequirementsName,
+     sizeof(kGetImageMemoryRequirementsName) - 1u, kI64I64I64Types, 3u,
+     kI32Types, 1u, get_image_memory_requirements_entry},
     {kAllocateMemoryName, sizeof(kAllocateMemoryName) - 1u, kI64I64I64Types, 3u,
      kI32Types, 1u, allocate_memory_entry},
     {kFreeMemoryName, sizeof(kFreeMemoryName) - 1u, kI64I64Types, 2u, kI32Types,
      1u, free_memory_entry},
     {kBindBufferMemoryName, sizeof(kBindBufferMemoryName) - 1u,
      kI64I64I64I64Types, 4u, kI32Types, 1u, bind_buffer_memory_entry},
+    {kBindImageMemoryName, sizeof(kBindImageMemoryName) - 1u,
+     kI64I64I64I64Types, 4u, kI32Types, 1u, bind_image_memory_entry},
     {kCopyGuestToDeviceMemoryName, sizeof(kCopyGuestToDeviceMemoryName) - 1u,
      kI64I64I64Types, 3u, kI32Types, 1u, copy_guest_to_device_memory_entry},
     {kCopyDeviceMemoryToGuestName, sizeof(kCopyDeviceMemoryToGuestName) - 1u,
@@ -437,7 +704,8 @@ inline constexpr uwvm_capi_function_vec_t kFunctionVec{
     kFunctions, sizeof(kFunctions) / sizeof(kFunctions[0])};
 inline constexpr uwvm_capi_custom_handler_vec_t kCustomHandlers{nullptr, 0u};
 inline constexpr uwvm_weak_symbol_module_c kWeakModule{
-    kModuleName, sizeof(kModuleName) - 1u, kCustomHandlers, kFunctionVec};
+    kModuleName, sizeof(kModuleName) - 1u, kCustomHandlers, kFunctionVec,
+    SetPreloadHostApi, SetWasiHostApi};
 inline constexpr uwvm_weak_symbol_module_vector_c kWeakVector{&kWeakModule, 1u};
 
 } // namespace
@@ -458,6 +726,10 @@ uwvm_weak_symbol_module_vector_c const *GetWeakModuleVector() noexcept {
 
 void SetPreloadHostApi(uwvm_preload_host_api_v1 const *host_api) noexcept {
   runtime::PluginContext::Instance().SetExplicitHostApi(host_api);
+}
+
+void SetWasiHostApi(uwvm_wasip1_host_api_v1 const *host_api) noexcept {
+  runtime::PluginContext::Instance().SetExplicitWasiHostApi(host_api);
 }
 
 } // namespace uwvm2_vulkan::plugin

@@ -75,6 +75,62 @@ GetDeviceQueue(std::uint64_t device_handle, std::uint32_t queue_family_index,
                std::uint64_t out_queue_address) noexcept;
 [[nodiscard]] std::int32_t QueueWaitIdle(std::uint64_t queue_handle) noexcept;
 [[nodiscard]] std::int32_t
+CreateCommandPool(std::uint64_t device_handle,
+                  std::uint64_t create_info_address,
+                  std::uint64_t out_command_pool_address) noexcept;
+[[nodiscard]] std::int32_t DestroyCommandPool(
+    std::uint64_t device_handle, std::uint64_t command_pool_handle) noexcept;
+[[nodiscard]] std::int32_t ResetCommandPool(std::uint64_t device_handle,
+                                            std::uint64_t command_pool_handle,
+                                            std::uint32_t flags) noexcept;
+[[nodiscard]] std::int32_t
+AllocateCommandBuffers(std::uint64_t device_handle,
+                       std::uint64_t allocate_info_address,
+                       std::uint64_t out_command_buffer_buffer_address) noexcept;
+[[nodiscard]] std::int32_t FreeCommandBuffers(
+    std::uint64_t device_handle, std::uint64_t command_pool_handle,
+    std::uint64_t command_buffer_handle_buffer_address,
+    std::uint32_t command_buffer_count) noexcept;
+[[nodiscard]] std::int32_t
+BeginCommandBuffer(std::uint64_t device_handle,
+                   std::uint64_t command_buffer_handle,
+                   std::uint64_t begin_info_address) noexcept;
+[[nodiscard]] std::int32_t
+EndCommandBuffer(std::uint64_t device_handle,
+                 std::uint64_t command_buffer_handle) noexcept;
+[[nodiscard]] std::int32_t
+ResetCommandBuffer(std::uint64_t device_handle,
+                   std::uint64_t command_buffer_handle,
+                   std::uint32_t flags) noexcept;
+[[nodiscard]] std::int32_t
+CreateShaderModule(std::uint64_t device_handle,
+                   std::uint64_t create_info_address,
+                   std::uint64_t out_shader_module_address) noexcept;
+[[nodiscard]] std::int32_t
+DestroyShaderModule(std::uint64_t device_handle,
+                    std::uint64_t shader_module_handle) noexcept;
+[[nodiscard]] std::int32_t
+CreateSemaphore(std::uint64_t device_handle, std::uint64_t create_info_address,
+                std::uint64_t out_semaphore_address) noexcept;
+[[nodiscard]] std::int32_t
+DestroySemaphore(std::uint64_t device_handle,
+                 std::uint64_t semaphore_handle) noexcept;
+[[nodiscard]] std::int32_t
+CreateFence(std::uint64_t device_handle, std::uint64_t create_info_address,
+            std::uint64_t out_fence_address) noexcept;
+[[nodiscard]] std::int32_t DestroyFence(std::uint64_t device_handle,
+                                        std::uint64_t fence_handle) noexcept;
+[[nodiscard]] std::int32_t GetFenceStatus(std::uint64_t device_handle,
+                                          std::uint64_t fence_handle) noexcept;
+[[nodiscard]] std::int32_t
+WaitForFences(std::uint64_t device_handle,
+              std::uint64_t fence_handle_buffer_address,
+              std::uint32_t fence_count, std::uint32_t wait_all,
+              std::uint64_t timeout_nanoseconds) noexcept;
+[[nodiscard]] std::int32_t ResetFences(std::uint64_t device_handle,
+                                       std::uint64_t fence_handle_buffer_address,
+                                       std::uint32_t fence_count) noexcept;
+[[nodiscard]] std::int32_t
 CreateBuffer(std::uint64_t device_handle, std::uint64_t create_info_address,
              std::uint64_t out_buffer_address) noexcept;
 [[nodiscard]] std::int32_t DestroyBuffer(std::uint64_t device_handle,

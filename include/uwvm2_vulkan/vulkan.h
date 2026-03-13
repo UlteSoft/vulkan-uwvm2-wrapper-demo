@@ -118,6 +118,101 @@ int32_t __imported_vulkan_queue_wait_idle(
     uint64_t queue_handle) __WASI_NOEXCEPT
     UWVM2_VULKAN_IMPORT_MODULE("wasiu-vulkan") IMPORT_NAME("queue_wait_idle");
 
+int32_t __imported_vulkan_create_command_pool(
+    uint64_t device_handle, uint64_t create_info_address,
+    uint64_t out_command_pool_address) __WASI_NOEXCEPT
+    UWVM2_VULKAN_IMPORT_MODULE("wasiu-vulkan")
+        IMPORT_NAME("create_command_pool");
+
+int32_t __imported_vulkan_destroy_command_pool(
+    uint64_t device_handle, uint64_t command_pool_handle) __WASI_NOEXCEPT
+    UWVM2_VULKAN_IMPORT_MODULE("wasiu-vulkan")
+        IMPORT_NAME("destroy_command_pool");
+
+int32_t __imported_vulkan_reset_command_pool(
+    uint64_t device_handle, uint64_t command_pool_handle,
+    uint32_t flags) __WASI_NOEXCEPT
+    UWVM2_VULKAN_IMPORT_MODULE("wasiu-vulkan")
+        IMPORT_NAME("reset_command_pool");
+
+int32_t __imported_vulkan_allocate_command_buffers(
+    uint64_t device_handle, uint64_t allocate_info_address,
+    uint64_t out_command_buffer_buffer_address) __WASI_NOEXCEPT
+    UWVM2_VULKAN_IMPORT_MODULE("wasiu-vulkan")
+        IMPORT_NAME("allocate_command_buffers");
+
+int32_t __imported_vulkan_free_command_buffers(
+    uint64_t device_handle, uint64_t command_pool_handle,
+    uint64_t command_buffer_handle_buffer_address,
+    uint32_t command_buffer_count) __WASI_NOEXCEPT
+    UWVM2_VULKAN_IMPORT_MODULE("wasiu-vulkan")
+        IMPORT_NAME("free_command_buffers");
+
+int32_t __imported_vulkan_begin_command_buffer(
+    uint64_t device_handle, uint64_t command_buffer_handle,
+    uint64_t begin_info_address) __WASI_NOEXCEPT
+    UWVM2_VULKAN_IMPORT_MODULE("wasiu-vulkan")
+        IMPORT_NAME("begin_command_buffer");
+
+int32_t __imported_vulkan_end_command_buffer(
+    uint64_t device_handle, uint64_t command_buffer_handle) __WASI_NOEXCEPT
+    UWVM2_VULKAN_IMPORT_MODULE("wasiu-vulkan")
+        IMPORT_NAME("end_command_buffer");
+
+int32_t __imported_vulkan_reset_command_buffer(
+    uint64_t device_handle, uint64_t command_buffer_handle,
+    uint32_t flags) __WASI_NOEXCEPT
+    UWVM2_VULKAN_IMPORT_MODULE("wasiu-vulkan")
+        IMPORT_NAME("reset_command_buffer");
+
+int32_t __imported_vulkan_create_shader_module(
+    uint64_t device_handle, uint64_t create_info_address,
+    uint64_t out_shader_module_address) __WASI_NOEXCEPT
+    UWVM2_VULKAN_IMPORT_MODULE("wasiu-vulkan")
+        IMPORT_NAME("create_shader_module");
+
+int32_t __imported_vulkan_destroy_shader_module(
+    uint64_t device_handle, uint64_t shader_module_handle) __WASI_NOEXCEPT
+    UWVM2_VULKAN_IMPORT_MODULE("wasiu-vulkan")
+        IMPORT_NAME("destroy_shader_module");
+
+int32_t __imported_vulkan_create_semaphore(
+    uint64_t device_handle, uint64_t create_info_address,
+    uint64_t out_semaphore_address) __WASI_NOEXCEPT
+    UWVM2_VULKAN_IMPORT_MODULE("wasiu-vulkan")
+        IMPORT_NAME("create_semaphore");
+
+int32_t __imported_vulkan_destroy_semaphore(
+    uint64_t device_handle, uint64_t semaphore_handle) __WASI_NOEXCEPT
+    UWVM2_VULKAN_IMPORT_MODULE("wasiu-vulkan")
+        IMPORT_NAME("destroy_semaphore");
+
+int32_t __imported_vulkan_create_fence(
+    uint64_t device_handle, uint64_t create_info_address,
+    uint64_t out_fence_address) __WASI_NOEXCEPT
+    UWVM2_VULKAN_IMPORT_MODULE("wasiu-vulkan") IMPORT_NAME("create_fence");
+
+int32_t __imported_vulkan_destroy_fence(
+    uint64_t device_handle, uint64_t fence_handle) __WASI_NOEXCEPT
+    UWVM2_VULKAN_IMPORT_MODULE("wasiu-vulkan") IMPORT_NAME("destroy_fence");
+
+int32_t __imported_vulkan_get_fence_status(
+    uint64_t device_handle, uint64_t fence_handle) __WASI_NOEXCEPT
+    UWVM2_VULKAN_IMPORT_MODULE("wasiu-vulkan")
+        IMPORT_NAME("get_fence_status");
+
+int32_t __imported_vulkan_wait_for_fences(
+    uint64_t device_handle, uint64_t fence_handle_buffer_address,
+    uint32_t fence_count, uint32_t wait_all,
+    uint64_t timeout_nanoseconds) __WASI_NOEXCEPT
+    UWVM2_VULKAN_IMPORT_MODULE("wasiu-vulkan")
+        IMPORT_NAME("wait_for_fences");
+
+int32_t __imported_vulkan_reset_fences(
+    uint64_t device_handle, uint64_t fence_handle_buffer_address,
+    uint32_t fence_count) __WASI_NOEXCEPT
+    UWVM2_VULKAN_IMPORT_MODULE("wasiu-vulkan") IMPORT_NAME("reset_fences");
+
 int32_t
 __imported_vulkan_create_buffer(uint64_t device_handle,
                                 uint64_t create_info_address,

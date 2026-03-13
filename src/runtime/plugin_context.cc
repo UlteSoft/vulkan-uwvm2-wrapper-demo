@@ -31,6 +31,7 @@ namespace uwvm2_vulkan::runtime {
 namespace {
 
 using host_api_getter_t = uwvm_preload_host_api_v1 const *(*)();
+using wasi_host_api_getter_t = uwvm_wasip1_host_api_v1 const *(*)();
 
 [[nodiscard]] host_api_getter_t LookupHostApiGetter() noexcept {
 #if defined(_WIN32)
@@ -43,6 +44,20 @@ using host_api_getter_t = uwvm_preload_host_api_v1 const *(*)();
 #else
   return reinterpret_cast<host_api_getter_t>(
       ::dlsym(RTLD_DEFAULT, "uwvm_get_preload_host_api_v1"));
+#endif
+}
+
+[[nodiscard]] wasi_host_api_getter_t LookupWasiHostApiGetter() noexcept {
+#if defined(_WIN32)
+  auto *module_handle{::GetModuleHandleW(nullptr)};
+  if (module_handle == nullptr) {
+    return nullptr;
+  }
+  return reinterpret_cast<wasi_host_api_getter_t>(
+      ::GetProcAddress(module_handle, "uwvm_get_wasip1_host_api_v1"));
+#else
+  return reinterpret_cast<wasi_host_api_getter_t>(
+      ::dlsym(RTLD_DEFAULT, "uwvm_get_wasip1_host_api_v1"));
 #endif
 }
 
@@ -59,6 +74,12 @@ void PluginContext::SetExplicitHostApi(
   memory_.SetHostApi(ResolveHostApi());
 }
 
+void PluginContext::SetExplicitWasiHostApi(
+    uwvm_wasip1_host_api_v1 const *host_api) noexcept {
+  explicit_wasi_host_api_ = host_api;
+  wasi_filesystem_.SetHostApi(ResolveWasiHostApi());
+}
+
 uwvm_preload_host_api_v1 const *PluginContext::ResolveHostApi() const noexcept {
   if (explicit_host_api_ != nullptr) {
     return explicit_host_api_;
@@ -72,9 +93,27 @@ uwvm_preload_host_api_v1 const *PluginContext::ResolveHostApi() const noexcept {
   return nullptr;
 }
 
+uwvm_wasip1_host_api_v1 const *PluginContext::ResolveWasiHostApi() const noexcept {
+  if (explicit_wasi_host_api_ != nullptr) {
+    return explicit_wasi_host_api_;
+  }
+
+  auto const getter{LookupWasiHostApiGetter()};
+  if (getter != nullptr) {
+    return getter();
+  }
+
+  return nullptr;
+}
+
 GuestMemoryAccessor &PluginContext::memory() noexcept {
   memory_.SetHostApi(ResolveHostApi());
   return memory_;
+}
+
+WasiFileSystem &PluginContext::wasi_filesystem() noexcept {
+  wasi_filesystem_.SetHostApi(ResolveWasiHostApi());
+  return wasi_filesystem_;
 }
 
 vk::Backend &PluginContext::backend() noexcept {

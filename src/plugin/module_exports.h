@@ -32,6 +32,7 @@ namespace uwvm2_vulkan::plugin {
 [[nodiscard]] uwvm_weak_symbol_module_vector_c const *
 GetWeakModuleVector() noexcept;
 void SetPreloadHostApi(uwvm_preload_host_api_v1 const *host_api) noexcept;
+void SetWasiHostApi(uwvm_wasip1_host_api_v1 const *host_api) noexcept;
 
 } // namespace uwvm2_vulkan::plugin
 

@@ -30,6 +30,37 @@ struct DestroyBufferCall {
   native::VkBuffer buffer{};
 };
 
+struct DestroyImageCall {
+  native::VkDevice device{};
+  native::VkImage image{};
+};
+
+struct DestroyShaderModuleCall {
+  native::VkDevice device{};
+  native::VkShaderModule shader_module{};
+};
+
+struct DestroySemaphoreCall {
+  native::VkDevice device{};
+  native::VkSemaphore semaphore{};
+};
+
+struct DestroyFenceCall {
+  native::VkDevice device{};
+  native::VkFence fence{};
+};
+
+struct DestroyCommandPoolCall {
+  native::VkDevice device{};
+  native::VkCommandPool command_pool{};
+};
+
+struct FreeCommandBuffersCall {
+  native::VkDevice device{};
+  native::VkCommandPool command_pool{};
+  std::vector<native::VkCommandBuffer> command_buffers{};
+};
+
 struct FreeMemoryCall {
   native::VkDevice device{};
   native::VkDeviceMemory memory{};
@@ -275,6 +306,165 @@ public:
     return queue_wait_idle_result;
   }
 
+  std::int32_t CreateCommandPool(
+      native::VkDevice device,
+      native::VkCommandPoolCreateInfo const &create_info,
+      native::VkCommandPool &command_pool) override {
+    last_create_command_pool_device = device;
+    last_create_command_pool_flags = create_info.flags;
+    last_create_command_pool_queue_family_index =
+        create_info.queueFamilyIndex;
+
+    auto const index{create_command_pool_call_count};
+    ++create_command_pool_call_count;
+    command_pool = index < create_command_pool_result_handles.size()
+                       ? create_command_pool_result_handles[index]
+                       : create_command_pool_result_handles.back();
+    return create_command_pool_result;
+  }
+
+  void DestroyCommandPool(native::VkDevice device,
+                          native::VkCommandPool command_pool) override {
+    destroyed_command_pools.push_back(
+        DestroyCommandPoolCall{device, command_pool});
+  }
+
+  std::int32_t ResetCommandPool(native::VkDevice device,
+                                native::VkCommandPool command_pool,
+                                std::uint32_t flags) override {
+    last_reset_command_pool_device = device;
+    last_reset_command_pool_pool = command_pool;
+    last_reset_command_pool_flags = flags;
+    return reset_command_pool_result;
+  }
+
+  std::int32_t AllocateCommandBuffers(
+      native::VkDevice device,
+      native::VkCommandBufferAllocateInfo const &allocate_info,
+      std::vector<native::VkCommandBuffer> &command_buffers) override {
+    last_allocate_command_buffers_device = device;
+    last_allocate_command_buffers_pool = allocate_info.commandPool;
+    last_allocate_command_buffers_level =
+        static_cast<std::uint32_t>(allocate_info.level);
+    last_allocate_command_buffers_count = allocate_info.commandBufferCount;
+
+    auto const index{allocate_command_buffers_call_count};
+    ++allocate_command_buffers_call_count;
+    command_buffers =
+        index < allocate_command_buffers_result_batches.size()
+            ? allocate_command_buffers_result_batches[index]
+            : allocate_command_buffers_result_batches.back();
+    return allocate_command_buffers_result;
+  }
+
+  void FreeCommandBuffers(
+      native::VkDevice device, native::VkCommandPool command_pool,
+      std::vector<native::VkCommandBuffer> const &command_buffers) override {
+    last_free_command_buffers_device = device;
+    last_free_command_buffers_pool = command_pool;
+    last_free_command_buffers_command_buffers = command_buffers;
+    free_command_buffers_calls.push_back(
+        FreeCommandBuffersCall{device, command_pool, command_buffers});
+  }
+
+  std::int32_t BeginCommandBuffer(
+      native::VkDevice device, native::VkCommandBuffer command_buffer,
+      native::VkCommandBufferBeginInfo const &begin_info) override {
+    last_begin_command_buffer_device = device;
+    last_begin_command_buffer = command_buffer;
+    last_begin_command_buffer_flags = begin_info.flags;
+    return begin_command_buffer_result;
+  }
+
+  std::int32_t EndCommandBuffer(native::VkDevice device,
+                                native::VkCommandBuffer command_buffer) override {
+    last_end_command_buffer_device = device;
+    last_end_command_buffer = command_buffer;
+    return end_command_buffer_result;
+  }
+
+  std::int32_t ResetCommandBuffer(
+      native::VkDevice device, native::VkCommandBuffer command_buffer,
+      std::uint32_t flags) override {
+    last_reset_command_buffer_device = device;
+    last_reset_command_buffer = command_buffer;
+    last_reset_command_buffer_flags = flags;
+    return reset_command_buffer_result;
+  }
+
+  std::int32_t CreateShaderModule(
+      native::VkDevice device,
+      native::VkShaderModuleCreateInfo const &create_info,
+      native::VkShaderModule &shader_module) override {
+    last_create_shader_module_device = device;
+    last_create_shader_module_flags = create_info.flags;
+    last_create_shader_module_code_size = create_info.codeSize;
+    last_create_shader_module_words.assign(
+        create_info.pCode, create_info.pCode +
+                              (create_info.codeSize / sizeof(std::uint32_t)));
+    shader_module = create_shader_module_result_handle;
+    return create_shader_module_result;
+  }
+
+  void DestroyShaderModule(native::VkDevice device,
+                           native::VkShaderModule shader_module) override {
+    destroyed_shader_modules.push_back(
+        DestroyShaderModuleCall{device, shader_module});
+  }
+
+  std::int32_t CreateSemaphore(
+      native::VkDevice device, native::VkSemaphoreCreateInfo const &create_info,
+      native::VkSemaphore &semaphore) override {
+    last_create_semaphore_device = device;
+    last_create_semaphore_flags = create_info.flags;
+    semaphore = create_semaphore_result_handle;
+    return create_semaphore_result;
+  }
+
+  void DestroySemaphore(native::VkDevice device,
+                        native::VkSemaphore semaphore) override {
+    destroyed_semaphores.push_back(DestroySemaphoreCall{device, semaphore});
+  }
+
+  std::int32_t CreateFence(native::VkDevice device,
+                           native::VkFenceCreateInfo const &create_info,
+                           native::VkFence &fence) override {
+    last_create_fence_device = device;
+    last_create_fence_flags = create_info.flags;
+    fence = create_fence_result_handle;
+    return create_fence_result;
+  }
+
+  void DestroyFence(native::VkDevice device, native::VkFence fence) override {
+    destroyed_fences.push_back(DestroyFenceCall{device, fence});
+  }
+
+  std::int32_t GetFenceStatus(native::VkDevice device,
+                              native::VkFence fence) override {
+    last_get_fence_status_device = device;
+    last_get_fence_status_fence = fence;
+    return get_fence_status_result;
+  }
+
+  std::int32_t WaitForFences(native::VkDevice device,
+                             std::vector<native::VkFence> const &fences,
+                             bool wait_all,
+                             std::uint64_t timeout_nanoseconds) override {
+    last_wait_for_fences_device = device;
+    last_wait_for_fences_fences = fences;
+    last_wait_for_fences_wait_all = wait_all;
+    last_wait_for_fences_timeout_nanoseconds = timeout_nanoseconds;
+    return wait_for_fences_result;
+  }
+
+  std::int32_t ResetFences(
+      native::VkDevice device,
+      std::vector<native::VkFence> const &fences) override {
+    last_reset_fences_device = device;
+    last_reset_fences_fences = fences;
+    return reset_fences_result;
+  }
+
   std::int32_t CreateBuffer(native::VkDevice device,
                             native::VkBufferCreateInfo const &create_info,
                             native::VkBuffer &buffer) override {
@@ -295,6 +485,46 @@ public:
     (void)buffer;
     requirements = {};
     return UWVM_VK_ERROR_UNSUPPORTED_OPERATION;
+  }
+
+  std::int32_t CreateImage(native::VkDevice device,
+                           native::VkImageCreateInfo const &create_info,
+                           native::VkImage &image) override {
+    last_create_image_device = device;
+    last_create_image_type = static_cast<std::uint32_t>(create_info.imageType);
+    last_create_image_format = create_info.format;
+    last_create_image_extent = create_info.extent;
+    last_create_image_mip_levels = create_info.mipLevels;
+    last_create_image_array_layers = create_info.arrayLayers;
+    last_create_image_samples = create_info.samples;
+    last_create_image_tiling =
+        static_cast<std::uint32_t>(create_info.tiling);
+    last_create_image_usage = create_info.usage;
+    last_create_image_sharing_mode =
+        static_cast<std::uint32_t>(create_info.sharingMode);
+    last_create_image_initial_layout =
+        static_cast<std::uint32_t>(create_info.initialLayout);
+    last_create_image_queue_families.clear();
+    for (std::uint32_t i{}; i != create_info.queueFamilyIndexCount; ++i) {
+      last_create_image_queue_families.push_back(
+          create_info.pQueueFamilyIndices[i]);
+    }
+
+    image = create_image_result_handle;
+    return create_image_result;
+  }
+
+  void DestroyImage(native::VkDevice device, native::VkImage image) override {
+    destroyed_images.push_back(DestroyImageCall{device, image});
+  }
+
+  std::int32_t GetImageMemoryRequirements(
+      native::VkDevice device, native::VkImage image,
+      uwvm_vk_memory_requirements &requirements) override {
+    (void)device;
+    last_get_image_memory_requirements_image = image;
+    requirements = image_memory_requirements;
+    return get_image_memory_requirements_result;
   }
 
   std::int32_t AllocateMemory(
@@ -318,6 +548,16 @@ public:
     (void)memory;
     (void)offset;
     return UWVM_VK_ERROR_UNSUPPORTED_OPERATION;
+  }
+
+  std::int32_t BindImageMemory(native::VkDevice device, native::VkImage image,
+                               native::VkDeviceMemory memory,
+                               std::uint64_t offset) override {
+    last_bind_image_memory_device = device;
+    last_bind_image_memory_image = image;
+    last_bind_image_memory_memory = memory;
+    last_bind_image_memory_offset = offset;
+    return bind_image_memory_result;
   }
 
   std::int32_t MapMemory(native::VkDevice device, native::VkDeviceMemory memory,
@@ -379,6 +619,41 @@ public:
   native::VkQueue get_device_queue_result_handle{
       reinterpret_cast<native::VkQueue>(0x4000u)};
   std::int32_t get_device_queue_result{UWVM_VK_SUCCESS};
+  std::vector<native::VkCommandPool> create_command_pool_result_handles{
+      static_cast<native::VkCommandPool>(0x4600u),
+      static_cast<native::VkCommandPool>(0x4610u)};
+  std::size_t create_command_pool_call_count{};
+  std::int32_t create_command_pool_result{UWVM_VK_SUCCESS};
+  std::vector<std::vector<native::VkCommandBuffer>>
+      allocate_command_buffers_result_batches{
+          {reinterpret_cast<native::VkCommandBuffer>(0x4700u),
+           reinterpret_cast<native::VkCommandBuffer>(0x4800u)},
+          {reinterpret_cast<native::VkCommandBuffer>(0x4900u)}};
+  std::size_t allocate_command_buffers_call_count{};
+  std::int32_t allocate_command_buffers_result{UWVM_VK_SUCCESS};
+  std::int32_t reset_command_pool_result{UWVM_VK_SUCCESS};
+  std::int32_t begin_command_buffer_result{UWVM_VK_SUCCESS};
+  std::int32_t end_command_buffer_result{UWVM_VK_SUCCESS};
+  std::int32_t reset_command_buffer_result{UWVM_VK_SUCCESS};
+  native::VkShaderModule create_shader_module_result_handle{
+      static_cast<native::VkShaderModule>(0x4A00u)};
+  std::int32_t create_shader_module_result{UWVM_VK_SUCCESS};
+  native::VkSemaphore create_semaphore_result_handle{
+      static_cast<native::VkSemaphore>(0x4400u)};
+  std::int32_t create_semaphore_result{UWVM_VK_SUCCESS};
+  native::VkFence create_fence_result_handle{
+      static_cast<native::VkFence>(0x4500u)};
+  std::int32_t create_fence_result{UWVM_VK_SUCCESS};
+  std::int32_t get_fence_status_result{UWVM_VK_NOT_READY};
+  std::int32_t wait_for_fences_result{UWVM_VK_SUCCESS};
+  std::int32_t reset_fences_result{UWVM_VK_SUCCESS};
+  native::VkImage create_image_result_handle{
+      static_cast<native::VkImage>(0x8800u)};
+  std::int32_t create_image_result{UWVM_VK_SUCCESS};
+  uwvm_vk_memory_requirements image_memory_requirements{
+      .size = 4096u, .alignment = 256u, .memory_type_bits = 0x12u, .reserved = 0u};
+  std::int32_t get_image_memory_requirements_result{UWVM_VK_SUCCESS};
+  std::int32_t bind_image_memory_result{UWVM_VK_SUCCESS};
   std::int32_t device_wait_idle_result{UWVM_VK_SUCCESS};
   std::int32_t queue_wait_idle_result{UWVM_VK_SUCCESS};
   std::int32_t map_memory_result{UWVM_VK_SUCCESS};
@@ -401,12 +676,72 @@ public:
   std::uint32_t last_get_device_queue_index{};
   native::VkDevice last_queue_wait_idle_device{};
   native::VkQueue last_queue_wait_idle_queue{};
+  native::VkDevice last_create_command_pool_device{};
+  std::uint32_t last_create_command_pool_flags{};
+  std::uint32_t last_create_command_pool_queue_family_index{};
+  native::VkDevice last_reset_command_pool_device{};
+  native::VkCommandPool last_reset_command_pool_pool{};
+  std::uint32_t last_reset_command_pool_flags{};
+  native::VkDevice last_allocate_command_buffers_device{};
+  native::VkCommandPool last_allocate_command_buffers_pool{};
+  std::uint32_t last_allocate_command_buffers_level{};
+  std::uint32_t last_allocate_command_buffers_count{};
+  native::VkDevice last_free_command_buffers_device{};
+  native::VkCommandPool last_free_command_buffers_pool{};
+  std::vector<native::VkCommandBuffer> last_free_command_buffers_command_buffers{};
+  native::VkDevice last_begin_command_buffer_device{};
+  native::VkCommandBuffer last_begin_command_buffer{};
+  std::uint32_t last_begin_command_buffer_flags{};
+  native::VkDevice last_end_command_buffer_device{};
+  native::VkCommandBuffer last_end_command_buffer{};
+  native::VkDevice last_reset_command_buffer_device{};
+  native::VkCommandBuffer last_reset_command_buffer{};
+  std::uint32_t last_reset_command_buffer_flags{};
+  native::VkDevice last_create_shader_module_device{};
+  std::uint32_t last_create_shader_module_flags{};
+  std::size_t last_create_shader_module_code_size{};
+  std::vector<std::uint32_t> last_create_shader_module_words{};
+  native::VkDevice last_create_semaphore_device{};
+  std::uint32_t last_create_semaphore_flags{};
+  native::VkDevice last_create_fence_device{};
+  std::uint32_t last_create_fence_flags{};
+  native::VkDevice last_get_fence_status_device{};
+  native::VkFence last_get_fence_status_fence{};
+  native::VkDevice last_wait_for_fences_device{};
+  std::vector<native::VkFence> last_wait_for_fences_fences{};
+  bool last_wait_for_fences_wait_all{};
+  std::uint64_t last_wait_for_fences_timeout_nanoseconds{};
+  native::VkDevice last_reset_fences_device{};
+  std::vector<native::VkFence> last_reset_fences_fences{};
+  native::VkDevice last_create_image_device{};
+  std::uint32_t last_create_image_type{};
+  std::uint32_t last_create_image_format{};
+  native::VkExtent3D last_create_image_extent{};
+  std::uint32_t last_create_image_mip_levels{};
+  std::uint32_t last_create_image_array_layers{};
+  std::uint32_t last_create_image_samples{};
+  std::uint32_t last_create_image_tiling{};
+  std::uint32_t last_create_image_usage{};
+  std::uint32_t last_create_image_sharing_mode{};
+  std::uint32_t last_create_image_initial_layout{};
+  std::vector<std::uint32_t> last_create_image_queue_families{};
+  native::VkImage last_get_image_memory_requirements_image{};
+  native::VkDevice last_bind_image_memory_device{};
+  native::VkImage last_bind_image_memory_image{};
+  native::VkDeviceMemory last_bind_image_memory_memory{};
+  std::uint64_t last_bind_image_memory_offset{};
   std::size_t queue_wait_idle_calls{};
   std::size_t map_memory_calls{};
   std::size_t unmap_memory_calls{};
   std::size_t flush_mapped_memory_calls{};
   std::size_t invalidate_mapped_memory_calls{};
+  std::vector<DestroyCommandPoolCall> destroyed_command_pools{};
+  std::vector<DestroyShaderModuleCall> destroyed_shader_modules{};
+  std::vector<DestroySemaphoreCall> destroyed_semaphores{};
+  std::vector<DestroyFenceCall> destroyed_fences{};
   std::vector<DestroyBufferCall> destroyed_buffers{};
+  std::vector<DestroyImageCall> destroyed_images{};
+  std::vector<FreeCommandBuffersCall> free_command_buffers_calls{};
   std::vector<FreeMemoryCall> freed_memories{};
   std::vector<native::VkDevice> destroyed_devices{};
 };
@@ -457,6 +792,21 @@ int main() {
       reinterpret_cast<native::VkPhysicalDevice>(0x2200u)};
   auto const native_memory{static_cast<native::VkDeviceMemory>(0x5500u)};
   auto const native_buffer{static_cast<native::VkBuffer>(0x7700u)};
+  auto const native_image{static_cast<native::VkImage>(0x8800u)};
+  auto const native_semaphore{static_cast<native::VkSemaphore>(0x4400u)};
+  auto const native_fence{static_cast<native::VkFence>(0x4500u)};
+  auto const native_command_pool{
+      static_cast<native::VkCommandPool>(0x4600u)};
+  auto const native_destroyed_command_pool{
+      static_cast<native::VkCommandPool>(0x4610u)};
+  auto const native_command_buffer{
+      reinterpret_cast<native::VkCommandBuffer>(0x4700u)};
+  auto const native_freed_command_buffer{
+      reinterpret_cast<native::VkCommandBuffer>(0x4800u)};
+  auto const native_shader_module{
+      static_cast<native::VkShaderModule>(0x4A00u)};
+  auto const native_cleanup_shader_module{
+      static_cast<native::VkShaderModule>(0x4B00u)};
 
   auto const instance_handle{
       context.instances.Insert({.native_handle = native_instance})};
@@ -475,8 +825,30 @@ int main() {
   constexpr std::uint64_t kExtensionCountAddress{1088u};
   constexpr std::uint64_t kFeaturesOutAddress{1152u};
   constexpr std::uint64_t kOutQueueHandleAddress{1408u};
+  constexpr std::uint64_t kSemaphoreCreateInfoAddress{1440u};
+  constexpr std::uint64_t kOutSemaphoreHandleAddress{1456u};
+  constexpr std::uint64_t kFenceCreateInfoAddress{1472u};
+  constexpr std::uint64_t kOutFenceHandleAddress{1488u};
+  constexpr std::uint64_t kFenceHandleBufferAddress{1504u};
   constexpr std::uint64_t kGuestUploadAddress{1536u};
   constexpr std::uint64_t kCopyRegionAddress{1600u};
+  constexpr std::uint64_t kImageQueueFamiliesAddress{1664u};
+  constexpr std::uint64_t kImageCreateInfoAddress{1728u};
+  constexpr std::uint64_t kOutImageHandleAddress{1824u};
+  constexpr std::uint64_t kImageRequirementsAddress{1888u};
+  constexpr std::uint64_t kCommandPoolCreateInfoAddress{1952u};
+  constexpr std::uint64_t kOutCommandPoolHandleAddress{1968u};
+  constexpr std::uint64_t kCommandBufferAllocateInfoAddress{1984u};
+  constexpr std::uint64_t kCommandBufferHandleBufferAddress{2016u};
+  constexpr std::uint64_t kCommandBufferBeginInfoAddress{2048u};
+  constexpr std::uint64_t kFreeCommandBufferHandleBufferAddress{2080u};
+  constexpr std::uint64_t kOutDestroyedCommandPoolHandleAddress{2096u};
+  constexpr std::uint64_t kDestroyedCommandBufferAllocateInfoAddress{2112u};
+  constexpr std::uint64_t kDestroyedCommandBufferHandleBufferAddress{2144u};
+  constexpr std::uint64_t kShaderCodeAddress{2208u};
+  constexpr std::uint64_t kShaderModuleCreateInfoAddress{2240u};
+  constexpr std::uint64_t kOutShaderModuleHandleAddress{2272u};
+  constexpr std::uint64_t kOutCleanupShaderModuleHandleAddress{2288u};
 
   float queue_priority{1.0f};
   WriteGuest(kPriorityAddress, queue_priority);
@@ -533,9 +905,6 @@ int main() {
               kExtensionBufferAddress, 1u, kExtensionCountAddress) ==
           UWVM_VK_INCOMPLETE);
   auto const extension_count{ReadGuest<std::uint32_t>(kExtensionCountAddress)};
-  if (extension_count != 2u) {
-    std::fprintf(stderr, "extension_count=%u\n", extension_count);
-  }
   require(extension_count == 2u);
   auto const first_extension{
       ReadGuest<uwvm_vk_extension_property>(kExtensionBufferAddress)};
@@ -574,6 +943,228 @@ int main() {
   require(backend.last_queue_wait_idle_queue ==
           backend.get_device_queue_result_handle);
 
+  uwvm_vk_command_pool_create_info command_pool_create_info{
+      .flags = UWVM_VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+      .queue_family_index = 3u,
+      .reserved0 = 0u};
+  WriteGuest(kCommandPoolCreateInfoAddress, command_pool_create_info);
+  require(uwvm2_vulkan::api::CreateCommandPool(device_handle,
+                                               kCommandPoolCreateInfoAddress,
+                                               kOutCommandPoolHandleAddress) ==
+          UWVM_VK_SUCCESS);
+  auto const command_pool_handle{
+      ReadGuest<std::uint64_t>(kOutCommandPoolHandleAddress)};
+  require(command_pool_handle != 0u);
+  require(backend.last_create_command_pool_device == native_device_handle);
+  require(backend.last_create_command_pool_flags ==
+          UWVM_VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+  require(backend.last_create_command_pool_queue_family_index == 3u);
+
+  uwvm_vk_command_buffer_allocate_info command_buffer_allocate_info{
+      .command_pool_handle = command_pool_handle,
+      .level = UWVM_VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+      .command_buffer_count = 2u,
+      .reserved0 = 0u};
+  WriteGuest(kCommandBufferAllocateInfoAddress, command_buffer_allocate_info);
+  require(uwvm2_vulkan::api::AllocateCommandBuffers(
+              device_handle, kCommandBufferAllocateInfoAddress,
+              kCommandBufferHandleBufferAddress) == UWVM_VK_SUCCESS);
+  auto const command_buffer_handle{
+      ReadGuest<std::uint64_t>(kCommandBufferHandleBufferAddress)};
+  auto const freed_command_buffer_handle{
+      ReadGuest<std::uint64_t>(kCommandBufferHandleBufferAddress +
+                               sizeof(std::uint64_t))};
+  require(command_buffer_handle != 0u);
+  require(freed_command_buffer_handle != 0u);
+  require(command_buffer_handle != freed_command_buffer_handle);
+  require(backend.last_allocate_command_buffers_device == native_device_handle);
+  require(backend.last_allocate_command_buffers_pool == native_command_pool);
+  require(backend.last_allocate_command_buffers_level ==
+          UWVM_VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+  require(backend.last_allocate_command_buffers_count == 2u);
+
+  uwvm_vk_command_buffer_begin_info command_buffer_begin_info{
+      .flags = UWVM_VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+      .reserved0 = 0u,
+      .reserved1 = 0u};
+  WriteGuest(kCommandBufferBeginInfoAddress, command_buffer_begin_info);
+  require(uwvm2_vulkan::api::BeginCommandBuffer(
+              device_handle, command_buffer_handle,
+              kCommandBufferBeginInfoAddress) == UWVM_VK_SUCCESS);
+  require(backend.last_begin_command_buffer_device == native_device_handle);
+  require(backend.last_begin_command_buffer == native_command_buffer);
+  require(backend.last_begin_command_buffer_flags ==
+          UWVM_VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+  require(uwvm2_vulkan::api::EndCommandBuffer(device_handle,
+                                              command_buffer_handle) ==
+          UWVM_VK_SUCCESS);
+  require(backend.last_end_command_buffer_device == native_device_handle);
+  require(backend.last_end_command_buffer == native_command_buffer);
+
+  require(uwvm2_vulkan::api::ResetCommandBuffer(
+              device_handle, command_buffer_handle,
+              UWVM_VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT) ==
+          UWVM_VK_SUCCESS);
+  require(backend.last_reset_command_buffer_device == native_device_handle);
+  require(backend.last_reset_command_buffer == native_command_buffer);
+  require(backend.last_reset_command_buffer_flags ==
+          UWVM_VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+
+  WriteGuest(kFreeCommandBufferHandleBufferAddress, freed_command_buffer_handle);
+  require(uwvm2_vulkan::api::FreeCommandBuffers(
+              device_handle, command_pool_handle,
+              kFreeCommandBufferHandleBufferAddress, 1u) == UWVM_VK_SUCCESS);
+  require(context.command_buffers.Find(freed_command_buffer_handle) == nullptr);
+  require(context.command_buffers.Find(command_buffer_handle) != nullptr);
+  require(backend.last_free_command_buffers_device == native_device_handle);
+  require(backend.last_free_command_buffers_pool == native_command_pool);
+  require(backend.last_free_command_buffers_command_buffers.size() == 1u);
+  require(backend.last_free_command_buffers_command_buffers[0] ==
+          native_freed_command_buffer);
+  require(backend.free_command_buffers_calls.size() == 1u);
+
+  require(uwvm2_vulkan::api::ResetCommandPool(
+              device_handle, command_pool_handle,
+              UWVM_VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT) ==
+          UWVM_VK_SUCCESS);
+  require(backend.last_reset_command_pool_device == native_device_handle);
+  require(backend.last_reset_command_pool_pool == native_command_pool);
+  require(backend.last_reset_command_pool_flags ==
+          UWVM_VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+
+  command_pool_create_info.flags = UWVM_VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+  WriteGuest(kCommandPoolCreateInfoAddress, command_pool_create_info);
+  require(uwvm2_vulkan::api::CreateCommandPool(
+              device_handle, kCommandPoolCreateInfoAddress,
+              kOutDestroyedCommandPoolHandleAddress) == UWVM_VK_SUCCESS);
+  auto const destroyed_command_pool_handle{
+      ReadGuest<std::uint64_t>(kOutDestroyedCommandPoolHandleAddress)};
+  require(destroyed_command_pool_handle != 0u);
+
+  uwvm_vk_command_buffer_allocate_info destroyed_command_buffer_allocate_info{
+      .command_pool_handle = destroyed_command_pool_handle,
+      .level = UWVM_VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+      .command_buffer_count = 1u,
+      .reserved0 = 0u};
+  WriteGuest(kDestroyedCommandBufferAllocateInfoAddress,
+             destroyed_command_buffer_allocate_info);
+  require(uwvm2_vulkan::api::AllocateCommandBuffers(
+              device_handle, kDestroyedCommandBufferAllocateInfoAddress,
+              kDestroyedCommandBufferHandleBufferAddress) == UWVM_VK_SUCCESS);
+  auto const destroyed_command_buffer_handle{
+      ReadGuest<std::uint64_t>(kDestroyedCommandBufferHandleBufferAddress)};
+  require(destroyed_command_buffer_handle != 0u);
+  require(destroyed_command_buffer_handle != command_buffer_handle);
+
+  require(uwvm2_vulkan::api::DestroyCommandPool(
+              device_handle, destroyed_command_pool_handle) ==
+          UWVM_VK_SUCCESS);
+  require(context.command_pools.Find(destroyed_command_pool_handle) == nullptr);
+  require(context.command_buffers.Find(destroyed_command_buffer_handle) ==
+          nullptr);
+  require(backend.destroyed_command_pools.size() == 1u);
+  require(backend.destroyed_command_pools[0].device == native_device_handle);
+  require(backend.destroyed_command_pools[0].command_pool ==
+          native_destroyed_command_pool);
+
+  std::array<std::uint32_t, 4u> shader_module_words{
+      0x07230203u, 0x00010000u, 0x000D0003u, 0x00000002u};
+  WriteGuestBytes(kShaderCodeAddress, shader_module_words.data(),
+                  sizeof(shader_module_words));
+
+  uwvm_vk_shader_module_create_info shader_module_create_info{
+      .flags = 5u,
+      .reserved0 = 0u,
+      .code_size = sizeof(shader_module_words),
+      .code_address = kShaderCodeAddress};
+  WriteGuest(kShaderModuleCreateInfoAddress, shader_module_create_info);
+  require(uwvm2_vulkan::api::CreateShaderModule(
+              device_handle, kShaderModuleCreateInfoAddress,
+              kOutShaderModuleHandleAddress) == UWVM_VK_SUCCESS);
+  auto const shader_module_handle{
+      ReadGuest<std::uint64_t>(kOutShaderModuleHandleAddress)};
+  require(shader_module_handle != 0u);
+  require(context.shader_modules.Find(shader_module_handle) != nullptr);
+  require(backend.last_create_shader_module_device == native_device_handle);
+  require(backend.last_create_shader_module_flags == 5u);
+  require(backend.last_create_shader_module_code_size ==
+          sizeof(shader_module_words));
+  require(backend.last_create_shader_module_words.size() ==
+          shader_module_words.size());
+  for (std::size_t i{}; i != shader_module_words.size(); ++i) {
+    require(backend.last_create_shader_module_words[i] ==
+            shader_module_words[i]);
+  }
+
+  require(uwvm2_vulkan::api::DestroyShaderModule(device_handle,
+                                                 shader_module_handle) ==
+          UWVM_VK_SUCCESS);
+  require(context.shader_modules.Find(shader_module_handle) == nullptr);
+  require(backend.destroyed_shader_modules.size() == 1u);
+  require(backend.destroyed_shader_modules[0].device == native_device_handle);
+  require(backend.destroyed_shader_modules[0].shader_module ==
+          native_shader_module);
+
+  backend.create_shader_module_result_handle = native_cleanup_shader_module;
+  require(uwvm2_vulkan::api::CreateShaderModule(
+              device_handle, kShaderModuleCreateInfoAddress,
+              kOutCleanupShaderModuleHandleAddress) == UWVM_VK_SUCCESS);
+  auto const cleanup_shader_module_handle{
+      ReadGuest<std::uint64_t>(kOutCleanupShaderModuleHandleAddress)};
+  require(cleanup_shader_module_handle != 0u);
+  require(cleanup_shader_module_handle != shader_module_handle);
+  require(context.shader_modules.Find(cleanup_shader_module_handle) != nullptr);
+
+  uwvm_vk_semaphore_create_info semaphore_create_info{
+      .flags = 0u, .reserved0 = 0u, .reserved1 = 0u};
+  WriteGuest(kSemaphoreCreateInfoAddress, semaphore_create_info);
+  require(uwvm2_vulkan::api::CreateSemaphore(device_handle,
+                                             kSemaphoreCreateInfoAddress,
+                                             kOutSemaphoreHandleAddress) ==
+          UWVM_VK_SUCCESS);
+  auto const semaphore_handle{
+      ReadGuest<std::uint64_t>(kOutSemaphoreHandleAddress)};
+  require(semaphore_handle != 0u);
+  require(backend.last_create_semaphore_device == native_device_handle);
+  require(backend.last_create_semaphore_flags == 0u);
+
+  uwvm_vk_fence_create_info fence_create_info{
+      .flags = UWVM_VK_FENCE_CREATE_SIGNALED_BIT,
+      .reserved0 = 0u,
+      .reserved1 = 0u};
+  WriteGuest(kFenceCreateInfoAddress, fence_create_info);
+  require(uwvm2_vulkan::api::CreateFence(device_handle,
+                                         kFenceCreateInfoAddress,
+                                         kOutFenceHandleAddress) ==
+          UWVM_VK_SUCCESS);
+  auto const fence_handle{ReadGuest<std::uint64_t>(kOutFenceHandleAddress)};
+  require(fence_handle != 0u);
+  require(backend.last_create_fence_device == native_device_handle);
+  require(backend.last_create_fence_flags == UWVM_VK_FENCE_CREATE_SIGNALED_BIT);
+
+  WriteGuest(kFenceHandleBufferAddress, fence_handle);
+  require(uwvm2_vulkan::api::GetFenceStatus(device_handle, fence_handle) ==
+          UWVM_VK_NOT_READY);
+  require(backend.last_get_fence_status_device == native_device_handle);
+  require(backend.last_get_fence_status_fence == native_fence);
+
+  require(uwvm2_vulkan::api::WaitForFences(device_handle,
+                                           kFenceHandleBufferAddress, 1u, 1u,
+                                           123456789u) == UWVM_VK_SUCCESS);
+  require(backend.last_wait_for_fences_device == native_device_handle);
+  require(backend.last_wait_for_fences_fences.size() == 1u);
+  require(backend.last_wait_for_fences_fences[0] == native_fence);
+  require(backend.last_wait_for_fences_wait_all);
+  require(backend.last_wait_for_fences_timeout_nanoseconds == 123456789u);
+
+  require(uwvm2_vulkan::api::ResetFences(device_handle,
+                                         kFenceHandleBufferAddress, 1u) ==
+          UWVM_VK_SUCCESS);
+  require(backend.last_reset_fences_device == native_device_handle);
+  require(backend.last_reset_fences_fences.size() == 1u);
+  require(backend.last_reset_fences_fences[0] == native_fence);
+
   auto const memory_handle{context.memories.Insert(
       {.native_handle = native_memory,
        .parent_device_handle = device_handle,
@@ -583,6 +1174,70 @@ int main() {
       {.native_handle = native_buffer, .parent_device_handle = device_handle})};
   require(memory_handle != 0u);
   require(buffer_handle != 0u);
+
+  std::array<std::uint32_t, 2u> image_queue_families{1u, 3u};
+  WriteGuestBytes(kImageQueueFamiliesAddress, image_queue_families.data(),
+                  sizeof(image_queue_families));
+
+  uwvm_vk_image_create_info image_create_info{
+      .flags = 0u,
+      .image_type = UWVM_VK_IMAGE_TYPE_2D,
+      .format = 37u,
+      .mip_levels = 1u,
+      .array_layers = 1u,
+      .samples = UWVM_VK_SAMPLE_COUNT_1_BIT,
+      .tiling = UWVM_VK_IMAGE_TILING_OPTIMAL,
+      .usage = 0x10u,
+      .sharing_mode = UWVM_VK_SHARING_MODE_CONCURRENT,
+      .initial_layout = 0u,
+      .extent = {.width = 64u, .height = 32u, .depth = 1u, .reserved = 0u},
+      .queue_family_index_count = 2u,
+      .reserved0 = 0u,
+      .queue_family_indices_address = kImageQueueFamiliesAddress};
+  WriteGuest(kImageCreateInfoAddress, image_create_info);
+
+  require(uwvm2_vulkan::api::CreateImage(device_handle, kImageCreateInfoAddress,
+                                         kOutImageHandleAddress) ==
+          UWVM_VK_SUCCESS);
+  auto const image_handle{ReadGuest<std::uint64_t>(kOutImageHandleAddress)};
+  require(image_handle != 0u);
+  require(backend.last_create_image_device == native_device_handle);
+  require(backend.last_create_image_type == UWVM_VK_IMAGE_TYPE_2D);
+  require(backend.last_create_image_format == 37u);
+  require(backend.last_create_image_extent.width == 64u);
+  require(backend.last_create_image_extent.height == 32u);
+  require(backend.last_create_image_extent.depth == 1u);
+  require(backend.last_create_image_mip_levels == 1u);
+  require(backend.last_create_image_array_layers == 1u);
+  require(backend.last_create_image_samples == UWVM_VK_SAMPLE_COUNT_1_BIT);
+  require(backend.last_create_image_tiling == UWVM_VK_IMAGE_TILING_OPTIMAL);
+  require(backend.last_create_image_usage == 0x10u);
+  require(backend.last_create_image_sharing_mode ==
+          UWVM_VK_SHARING_MODE_CONCURRENT);
+  require(backend.last_create_image_initial_layout == 0u);
+  require(backend.last_create_image_queue_families.size() == 2u);
+  require(backend.last_create_image_queue_families[0] == 1u);
+  require(backend.last_create_image_queue_families[1] == 3u);
+
+  require(uwvm2_vulkan::api::GetImageMemoryRequirements(
+              device_handle, image_handle, kImageRequirementsAddress) ==
+          UWVM_VK_SUCCESS);
+  auto const image_requirements{
+      ReadGuest<uwvm_vk_memory_requirements>(kImageRequirementsAddress)};
+  require(image_requirements.size == backend.image_memory_requirements.size);
+  require(image_requirements.alignment ==
+          backend.image_memory_requirements.alignment);
+  require(image_requirements.memory_type_bits ==
+          backend.image_memory_requirements.memory_type_bits);
+  require(backend.last_get_image_memory_requirements_image == native_image);
+
+  require(uwvm2_vulkan::api::BindImageMemory(device_handle, image_handle,
+                                             memory_handle, 16u) ==
+          UWVM_VK_SUCCESS);
+  require(backend.last_bind_image_memory_device == native_device_handle);
+  require(backend.last_bind_image_memory_image == native_image);
+  require(backend.last_bind_image_memory_memory == native_memory);
+  require(backend.last_bind_image_memory_offset == 16u);
 
   std::array<std::byte, 4u> upload_bytes{
       std::byte{0x11}, std::byte{0x22}, std::byte{0x33}, std::byte{0x44}};
@@ -607,19 +1262,44 @@ int main() {
   require(uwvm2_vulkan::api::DestroyDevice(device_handle) == UWVM_VK_SUCCESS);
   require(context.devices.Find(device_handle) == nullptr);
   require(context.queues.Find(queue_handle) == nullptr);
+  require(context.command_pools.Find(command_pool_handle) == nullptr);
+  require(context.command_buffers.Find(command_buffer_handle) == nullptr);
+  require(context.command_buffers.Find(freed_command_buffer_handle) == nullptr);
+  require(context.shader_modules.Find(cleanup_shader_module_handle) == nullptr);
+  require(context.semaphores.Find(semaphore_handle) == nullptr);
+  require(context.fences.Find(fence_handle) == nullptr);
   require(context.buffers.Find(buffer_handle) == nullptr);
+  require(context.images.Find(image_handle) == nullptr);
   require(context.memories.Find(memory_handle) == nullptr);
   require(backend.destroyed_devices.size() == 1u);
   require(backend.destroyed_devices[0] == native_device_handle);
+  require(backend.destroyed_command_pools.size() == 2u);
+  require(backend.destroyed_command_pools[1].device == native_device_handle);
+  require(backend.destroyed_command_pools[1].command_pool ==
+          native_command_pool);
+  require(backend.destroyed_shader_modules.size() == 2u);
+  require(backend.destroyed_shader_modules[1].device == native_device_handle);
+  require(backend.destroyed_shader_modules[1].shader_module ==
+          native_cleanup_shader_module);
+  require(backend.destroyed_semaphores.size() == 1u);
+  require(backend.destroyed_semaphores[0].device == native_device_handle);
+  require(backend.destroyed_semaphores[0].semaphore == native_semaphore);
+  require(backend.destroyed_fences.size() == 1u);
+  require(backend.destroyed_fences[0].device == native_device_handle);
+  require(backend.destroyed_fences[0].fence == native_fence);
   require(backend.destroyed_buffers.size() == 1u);
   require(backend.destroyed_buffers[0].device == native_device_handle);
   require(backend.destroyed_buffers[0].buffer == native_buffer);
+  require(backend.destroyed_images.size() == 1u);
+  require(backend.destroyed_images[0].device == native_device_handle);
+  require(backend.destroyed_images[0].image == native_image);
   require(backend.freed_memories.size() == 1u);
   require(backend.freed_memories[0].device == native_device_handle);
   require(backend.freed_memories[0].memory == native_memory);
 
   context.SetBackendForTesting(nullptr);
   context.SetExplicitHostApi(nullptr);
+  context.SetExplicitWasiHostApi(nullptr);
   g_host = nullptr;
   return 0;
 }

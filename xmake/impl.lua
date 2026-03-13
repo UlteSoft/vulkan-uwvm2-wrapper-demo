@@ -123,6 +123,12 @@ function _build_test_targets()
         add_files("test/module_registry_test.cc")
         _apply_common_target_settings()
 
+    target("wasi_file_system_test")
+        set_kind("binary")
+        add_deps("uwvm2_vulkan_plugin_core")
+        add_files("test/wasi_file_system_test.cc")
+        _apply_common_target_settings()
+
     target("vulkan_api_test")
         set_kind("binary")
         add_deps("uwvm2_vulkan_plugin_core")

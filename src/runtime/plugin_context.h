@@ -28,6 +28,7 @@
 #include "abi/uwvm_abi.h"
 #include "runtime/handle_registry.h"
 #include "runtime/memory_access.h"
+#include "runtime/wasi_file_system.h"
 #include "vulkan/backend.h"
 
 namespace uwvm2_vulkan::runtime {
@@ -37,8 +38,13 @@ public:
   static PluginContext &Instance() noexcept;
 
   void SetExplicitHostApi(uwvm_preload_host_api_v1 const *host_api) noexcept;
+  void SetExplicitWasiHostApi(
+      uwvm_wasip1_host_api_v1 const *host_api) noexcept;
   [[nodiscard]] uwvm_preload_host_api_v1 const *ResolveHostApi() const noexcept;
+  [[nodiscard]] uwvm_wasip1_host_api_v1 const *
+  ResolveWasiHostApi() const noexcept;
   [[nodiscard]] GuestMemoryAccessor &memory() noexcept;
+  [[nodiscard]] WasiFileSystem &wasi_filesystem() noexcept;
   [[nodiscard]] vk::Backend &backend() noexcept;
   void SetBackendForTesting(vk::Backend *backend) noexcept;
 
@@ -48,6 +54,11 @@ public:
   HandleTable<PhysicalDeviceRecord> physical_devices{};
   HandleTable<DeviceRecord> devices{};
   HandleTable<QueueRecord> queues{};
+  HandleTable<CommandPoolRecord> command_pools{};
+  HandleTable<CommandBufferRecord> command_buffers{};
+  HandleTable<ShaderModuleRecord> shader_modules{};
+  HandleTable<SemaphoreRecord> semaphores{};
+  HandleTable<FenceRecord> fences{};
   HandleTable<BufferRecord> buffers{};
   HandleTable<ImageRecord> images{};
   HandleTable<DeviceMemoryRecord> memories{};
@@ -57,7 +68,9 @@ private:
 
   mutable std::mutex mutex_{};
   uwvm_preload_host_api_v1 const *explicit_host_api_{};
+  uwvm_wasip1_host_api_v1 const *explicit_wasi_host_api_{};
   GuestMemoryAccessor memory_{};
+  WasiFileSystem wasi_filesystem_{};
   vk::DynamicBackend dynamic_backend_{};
   vk::Backend *override_backend_{};
 };

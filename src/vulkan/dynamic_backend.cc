@@ -595,6 +595,224 @@ std::int32_t DynamicBackend::QueueWaitIdle(native::VkDevice device,
   return queue_wait_idle(queue);
 }
 
+std::int32_t DynamicBackend::CreateCommandPool(
+    native::VkDevice device,
+    native::VkCommandPoolCreateInfo const &create_info,
+    native::VkCommandPool &command_pool) {
+  std::scoped_lock lock{impl_->mutex};
+  auto const create_command_pool{
+      impl_->LoadDeviceLocked<native::PFN_vkCreateCommandPool>(
+          device, "vkCreateCommandPool")};
+  if (create_command_pool == nullptr) {
+    return UWVM_VK_ERROR_UNSUPPORTED_OPERATION;
+  }
+  return create_command_pool(device, &create_info, nullptr, &command_pool);
+}
+
+void DynamicBackend::DestroyCommandPool(native::VkDevice device,
+                                        native::VkCommandPool command_pool) {
+  std::scoped_lock lock{impl_->mutex};
+  auto const destroy_command_pool{
+      impl_->LoadDeviceLocked<native::PFN_vkDestroyCommandPool>(
+          device, "vkDestroyCommandPool")};
+  if (destroy_command_pool != nullptr) {
+    destroy_command_pool(device, command_pool, nullptr);
+  }
+}
+
+std::int32_t DynamicBackend::ResetCommandPool(native::VkDevice device,
+                                              native::VkCommandPool command_pool,
+                                              std::uint32_t flags) {
+  std::scoped_lock lock{impl_->mutex};
+  auto const reset_command_pool{
+      impl_->LoadDeviceLocked<native::PFN_vkResetCommandPool>(
+          device, "vkResetCommandPool")};
+  if (reset_command_pool == nullptr) {
+    return UWVM_VK_ERROR_UNSUPPORTED_OPERATION;
+  }
+  return reset_command_pool(device, command_pool, flags);
+}
+
+std::int32_t DynamicBackend::AllocateCommandBuffers(
+    native::VkDevice device,
+    native::VkCommandBufferAllocateInfo const &allocate_info,
+    std::vector<native::VkCommandBuffer> &command_buffers) {
+  std::scoped_lock lock{impl_->mutex};
+  auto const allocate_command_buffers{
+      impl_->LoadDeviceLocked<native::PFN_vkAllocateCommandBuffers>(
+          device, "vkAllocateCommandBuffers")};
+  if (allocate_command_buffers == nullptr) {
+    return UWVM_VK_ERROR_UNSUPPORTED_OPERATION;
+  }
+
+  command_buffers.resize(allocate_info.commandBufferCount);
+  return allocate_command_buffers(device, &allocate_info, command_buffers.data());
+}
+
+void DynamicBackend::FreeCommandBuffers(
+    native::VkDevice device, native::VkCommandPool command_pool,
+    std::vector<native::VkCommandBuffer> const &command_buffers) {
+  std::scoped_lock lock{impl_->mutex};
+  auto const free_command_buffers{
+      impl_->LoadDeviceLocked<native::PFN_vkFreeCommandBuffers>(
+          device, "vkFreeCommandBuffers")};
+  if (free_command_buffers != nullptr && !command_buffers.empty()) {
+    free_command_buffers(device, command_pool,
+                         static_cast<std::uint32_t>(command_buffers.size()),
+                         command_buffers.data());
+  }
+}
+
+std::int32_t DynamicBackend::BeginCommandBuffer(
+    native::VkDevice device, native::VkCommandBuffer command_buffer,
+    native::VkCommandBufferBeginInfo const &begin_info) {
+  std::scoped_lock lock{impl_->mutex};
+  auto const begin_command_buffer{
+      impl_->LoadDeviceLocked<native::PFN_vkBeginCommandBuffer>(
+          device, "vkBeginCommandBuffer")};
+  if (begin_command_buffer == nullptr) {
+    return UWVM_VK_ERROR_UNSUPPORTED_OPERATION;
+  }
+  return begin_command_buffer(command_buffer, &begin_info);
+}
+
+std::int32_t DynamicBackend::EndCommandBuffer(
+    native::VkDevice device, native::VkCommandBuffer command_buffer) {
+  std::scoped_lock lock{impl_->mutex};
+  auto const end_command_buffer{
+      impl_->LoadDeviceLocked<native::PFN_vkEndCommandBuffer>(
+          device, "vkEndCommandBuffer")};
+  if (end_command_buffer == nullptr) {
+    return UWVM_VK_ERROR_UNSUPPORTED_OPERATION;
+  }
+  return end_command_buffer(command_buffer);
+}
+
+std::int32_t DynamicBackend::ResetCommandBuffer(
+    native::VkDevice device, native::VkCommandBuffer command_buffer,
+    std::uint32_t flags) {
+  std::scoped_lock lock{impl_->mutex};
+  auto const reset_command_buffer{
+      impl_->LoadDeviceLocked<native::PFN_vkResetCommandBuffer>(
+          device, "vkResetCommandBuffer")};
+  if (reset_command_buffer == nullptr) {
+    return UWVM_VK_ERROR_UNSUPPORTED_OPERATION;
+  }
+  return reset_command_buffer(command_buffer, flags);
+}
+
+std::int32_t DynamicBackend::CreateShaderModule(
+    native::VkDevice device,
+    native::VkShaderModuleCreateInfo const &create_info,
+    native::VkShaderModule &shader_module) {
+  std::scoped_lock lock{impl_->mutex};
+  auto const create_shader_module{
+      impl_->LoadDeviceLocked<native::PFN_vkCreateShaderModule>(
+          device, "vkCreateShaderModule")};
+  if (create_shader_module == nullptr) {
+    return UWVM_VK_ERROR_UNSUPPORTED_OPERATION;
+  }
+  return create_shader_module(device, &create_info, nullptr, &shader_module);
+}
+
+void DynamicBackend::DestroyShaderModule(native::VkDevice device,
+                                         native::VkShaderModule shader_module) {
+  std::scoped_lock lock{impl_->mutex};
+  auto const destroy_shader_module{
+      impl_->LoadDeviceLocked<native::PFN_vkDestroyShaderModule>(
+          device, "vkDestroyShaderModule")};
+  if (destroy_shader_module != nullptr) {
+    destroy_shader_module(device, shader_module, nullptr);
+  }
+}
+
+std::int32_t DynamicBackend::CreateSemaphore(
+    native::VkDevice device, native::VkSemaphoreCreateInfo const &create_info,
+    native::VkSemaphore &semaphore) {
+  std::scoped_lock lock{impl_->mutex};
+  auto const create_semaphore{
+      impl_->LoadDeviceLocked<native::PFN_vkCreateSemaphore>(
+          device, "vkCreateSemaphore")};
+  if (create_semaphore == nullptr) {
+    return UWVM_VK_ERROR_UNSUPPORTED_OPERATION;
+  }
+  return create_semaphore(device, &create_info, nullptr, &semaphore);
+}
+
+void DynamicBackend::DestroySemaphore(native::VkDevice device,
+                                      native::VkSemaphore semaphore) {
+  std::scoped_lock lock{impl_->mutex};
+  auto const destroy_semaphore{
+      impl_->LoadDeviceLocked<native::PFN_vkDestroySemaphore>(
+          device, "vkDestroySemaphore")};
+  if (destroy_semaphore != nullptr) {
+    destroy_semaphore(device, semaphore, nullptr);
+  }
+}
+
+std::int32_t DynamicBackend::CreateFence(
+    native::VkDevice device, native::VkFenceCreateInfo const &create_info,
+    native::VkFence &fence) {
+  std::scoped_lock lock{impl_->mutex};
+  auto const create_fence{impl_->LoadDeviceLocked<native::PFN_vkCreateFence>(
+      device, "vkCreateFence")};
+  if (create_fence == nullptr) {
+    return UWVM_VK_ERROR_UNSUPPORTED_OPERATION;
+  }
+  return create_fence(device, &create_info, nullptr, &fence);
+}
+
+void DynamicBackend::DestroyFence(native::VkDevice device,
+                                  native::VkFence fence) {
+  std::scoped_lock lock{impl_->mutex};
+  auto const destroy_fence{
+      impl_->LoadDeviceLocked<native::PFN_vkDestroyFence>(device,
+                                                          "vkDestroyFence")};
+  if (destroy_fence != nullptr) {
+    destroy_fence(device, fence, nullptr);
+  }
+}
+
+std::int32_t DynamicBackend::GetFenceStatus(native::VkDevice device,
+                                            native::VkFence fence) {
+  std::scoped_lock lock{impl_->mutex};
+  auto const get_fence_status{
+      impl_->LoadDeviceLocked<native::PFN_vkGetFenceStatus>(
+          device, "vkGetFenceStatus")};
+  if (get_fence_status == nullptr) {
+    return UWVM_VK_ERROR_UNSUPPORTED_OPERATION;
+  }
+  return get_fence_status(device, fence);
+}
+
+std::int32_t DynamicBackend::WaitForFences(
+    native::VkDevice device, std::vector<native::VkFence> const &fences,
+    bool wait_all, std::uint64_t timeout_nanoseconds) {
+  std::scoped_lock lock{impl_->mutex};
+  auto const wait_for_fences{
+      impl_->LoadDeviceLocked<native::PFN_vkWaitForFences>(
+          device, "vkWaitForFences")};
+  if (wait_for_fences == nullptr) {
+    return UWVM_VK_ERROR_UNSUPPORTED_OPERATION;
+  }
+  return wait_for_fences(device, static_cast<std::uint32_t>(fences.size()),
+                         fences.data(), wait_all ? 1u : 0u,
+                         timeout_nanoseconds);
+}
+
+std::int32_t DynamicBackend::ResetFences(
+    native::VkDevice device, std::vector<native::VkFence> const &fences) {
+  std::scoped_lock lock{impl_->mutex};
+  auto const reset_fences{
+      impl_->LoadDeviceLocked<native::PFN_vkResetFences>(device,
+                                                         "vkResetFences")};
+  if (reset_fences == nullptr) {
+    return UWVM_VK_ERROR_UNSUPPORTED_OPERATION;
+  }
+  return reset_fences(device, static_cast<std::uint32_t>(fences.size()),
+                      fences.data());
+}
+
 std::int32_t
 DynamicBackend::CreateBuffer(native::VkDevice device,
                              native::VkBufferCreateInfo const &create_info,
@@ -639,6 +857,49 @@ std::int32_t DynamicBackend::GetBufferMemoryRequirements(
   return UWVM_VK_SUCCESS;
 }
 
+std::int32_t DynamicBackend::CreateImage(native::VkDevice device,
+                                         native::VkImageCreateInfo const &create_info,
+                                         native::VkImage &image) {
+  std::scoped_lock lock{impl_->mutex};
+  auto const create_image{impl_->LoadDeviceLocked<native::PFN_vkCreateImage>(
+      device, "vkCreateImage")};
+  if (create_image == nullptr) {
+    return UWVM_VK_ERROR_UNSUPPORTED_OPERATION;
+  }
+  return create_image(device, &create_info, nullptr, &image);
+}
+
+void DynamicBackend::DestroyImage(native::VkDevice device,
+                                  native::VkImage image) {
+  std::scoped_lock lock{impl_->mutex};
+  auto const destroy_image{
+      impl_->LoadDeviceLocked<native::PFN_vkDestroyImage>(device,
+                                                          "vkDestroyImage")};
+  if (destroy_image != nullptr) {
+    destroy_image(device, image, nullptr);
+  }
+}
+
+std::int32_t DynamicBackend::GetImageMemoryRequirements(
+    native::VkDevice device, native::VkImage image,
+    uwvm_vk_memory_requirements &requirements) {
+  std::scoped_lock lock{impl_->mutex};
+  auto const get_requirements{
+      impl_->LoadDeviceLocked<native::PFN_vkGetImageMemoryRequirements>(
+          device, "vkGetImageMemoryRequirements")};
+  if (get_requirements == nullptr) {
+    return UWVM_VK_ERROR_UNSUPPORTED_OPERATION;
+  }
+
+  native::VkMemoryRequirements native_requirements{};
+  get_requirements(device, image, &native_requirements);
+  requirements.size = native_requirements.size;
+  requirements.alignment = native_requirements.alignment;
+  requirements.memory_type_bits = native_requirements.memoryTypeBits;
+  requirements.reserved = 0u;
+  return UWVM_VK_SUCCESS;
+}
+
 std::int32_t DynamicBackend::AllocateMemory(
     native::VkDevice device, native::VkMemoryAllocateInfo const &allocate_info,
     native::VkDeviceMemory &memory) {
@@ -674,6 +935,20 @@ std::int32_t DynamicBackend::BindBufferMemory(native::VkDevice device,
     return UWVM_VK_ERROR_UNSUPPORTED_OPERATION;
   }
   return bind_buffer_memory(device, buffer, memory, offset);
+}
+
+std::int32_t DynamicBackend::BindImageMemory(native::VkDevice device,
+                                             native::VkImage image,
+                                             native::VkDeviceMemory memory,
+                                             std::uint64_t offset) {
+  std::scoped_lock lock{impl_->mutex};
+  auto const bind_image_memory{
+      impl_->LoadDeviceLocked<native::PFN_vkBindImageMemory>(
+          device, "vkBindImageMemory")};
+  if (bind_image_memory == nullptr) {
+    return UWVM_VK_ERROR_UNSUPPORTED_OPERATION;
+  }
+  return bind_image_memory(device, image, memory, offset);
 }
 
 std::int32_t DynamicBackend::MapMemory(native::VkDevice device,

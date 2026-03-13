@@ -26,6 +26,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "abi/uwvm_wasi_abi.h"
 #include "uwvm2_vulkan/impl.h"
 
 extern "C" {
@@ -72,11 +73,17 @@ typedef struct uwvm_capi_function_vec_t {
   size_t function_size;
 } uwvm_capi_function_vec_t;
 
+typedef struct uwvm_preload_host_api_v1 uwvm_preload_host_api_v1;
+typedef void (*uwvm_set_preload_host_api_v1_t)(
+    uwvm_preload_host_api_v1 const *);
+
 typedef struct uwvm_weak_symbol_module_c {
   char const *module_name_ptr;
   size_t module_name_length;
   uwvm_capi_custom_handler_vec_t custom_handler_vec;
   uwvm_capi_function_vec_t function_vec;
+  uwvm_set_preload_host_api_v1_t set_preload_host_api_v1;
+  uwvm_set_wasip1_host_api_v1_t set_wasip1_host_api_v1;
 } uwvm_weak_symbol_module_c;
 
 typedef struct uwvm_weak_symbol_module_vector_c {
@@ -119,20 +126,19 @@ typedef bool (*uwvm_preload_memory_read_t)(size_t, uint_least64_t, void *,
 typedef bool (*uwvm_preload_memory_write_t)(size_t, uint_least64_t,
                                             void const *, size_t);
 
-typedef struct uwvm_preload_host_api_v1 {
+struct uwvm_preload_host_api_v1 {
   size_t struct_size;
   uint_least32_t abi_version;
   uwvm_preload_memory_descriptor_count_t memory_descriptor_count;
   uwvm_preload_memory_descriptor_at_t memory_descriptor_at;
   uwvm_preload_memory_read_t memory_read;
   uwvm_preload_memory_write_t memory_write;
-} uwvm_preload_host_api_v1;
-
-typedef void (*uwvm_set_preload_host_api_v1_t)(
-    uwvm_preload_host_api_v1 const *);
+};
 
 UWVM2_VULKAN_WEAK_IMPORT uwvm_preload_host_api_v1 const *
 uwvm_get_preload_host_api_v1(void);
+UWVM2_VULKAN_WEAK_IMPORT uwvm_wasip1_host_api_v1 const *
+uwvm_get_wasip1_host_api_v1(void);
 }
 
 #endif

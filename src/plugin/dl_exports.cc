@@ -28,6 +28,11 @@ extern "C" UWVM2_VULKAN_DLL_EXPORT void uwvm_set_preload_host_api_v1(
   uwvm2_vulkan::plugin::SetPreloadHostApi(host_api);
 }
 
+extern "C" UWVM2_VULKAN_DLL_EXPORT void uwvm_set_wasip1_host_api_v1(
+    uwvm_wasip1_host_api_v1 const *host_api) noexcept {
+  uwvm2_vulkan::plugin::SetWasiHostApi(host_api);
+}
+
 extern "C" UWVM2_VULKAN_DLL_EXPORT uwvm_capi_module_name_t
 uwvm_get_module_name() noexcept {
   return uwvm2_vulkan::plugin::GetModuleName();

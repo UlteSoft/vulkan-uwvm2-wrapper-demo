@@ -77,6 +77,60 @@ public:
   [[nodiscard]] virtual std::int32_t
   QueueWaitIdle(native::VkDevice device, native::VkQueue queue) = 0;
   [[nodiscard]] virtual std::int32_t
+  CreateCommandPool(native::VkDevice device,
+                    native::VkCommandPoolCreateInfo const &create_info,
+                    native::VkCommandPool &command_pool) = 0;
+  virtual void DestroyCommandPool(native::VkDevice device,
+                                  native::VkCommandPool command_pool) = 0;
+  [[nodiscard]] virtual std::int32_t
+  ResetCommandPool(native::VkDevice device, native::VkCommandPool command_pool,
+                   std::uint32_t flags) = 0;
+  [[nodiscard]] virtual std::int32_t
+  AllocateCommandBuffers(
+      native::VkDevice device,
+      native::VkCommandBufferAllocateInfo const &allocate_info,
+      std::vector<native::VkCommandBuffer> &command_buffers) = 0;
+  virtual void FreeCommandBuffers(
+      native::VkDevice device, native::VkCommandPool command_pool,
+      std::vector<native::VkCommandBuffer> const &command_buffers) = 0;
+  [[nodiscard]] virtual std::int32_t
+  BeginCommandBuffer(native::VkDevice device,
+                     native::VkCommandBuffer command_buffer,
+                     native::VkCommandBufferBeginInfo const &begin_info) = 0;
+  [[nodiscard]] virtual std::int32_t
+  EndCommandBuffer(native::VkDevice device,
+                   native::VkCommandBuffer command_buffer) = 0;
+  [[nodiscard]] virtual std::int32_t
+  ResetCommandBuffer(native::VkDevice device,
+                     native::VkCommandBuffer command_buffer,
+                     std::uint32_t flags) = 0;
+  [[nodiscard]] virtual std::int32_t
+  CreateShaderModule(native::VkDevice device,
+                     native::VkShaderModuleCreateInfo const &create_info,
+                     native::VkShaderModule &shader_module) = 0;
+  virtual void DestroyShaderModule(native::VkDevice device,
+                                   native::VkShaderModule shader_module) = 0;
+  [[nodiscard]] virtual std::int32_t
+  CreateSemaphore(native::VkDevice device,
+                  native::VkSemaphoreCreateInfo const &create_info,
+                  native::VkSemaphore &semaphore) = 0;
+  virtual void DestroySemaphore(native::VkDevice device,
+                                native::VkSemaphore semaphore) = 0;
+  [[nodiscard]] virtual std::int32_t
+  CreateFence(native::VkDevice device,
+              native::VkFenceCreateInfo const &create_info,
+              native::VkFence &fence) = 0;
+  virtual void DestroyFence(native::VkDevice device, native::VkFence fence) = 0;
+  [[nodiscard]] virtual std::int32_t
+  GetFenceStatus(native::VkDevice device, native::VkFence fence) = 0;
+  [[nodiscard]] virtual std::int32_t
+  WaitForFences(native::VkDevice device,
+                std::vector<native::VkFence> const &fences, bool wait_all,
+                std::uint64_t timeout_nanoseconds) = 0;
+  [[nodiscard]] virtual std::int32_t
+  ResetFences(native::VkDevice device,
+              std::vector<native::VkFence> const &fences) = 0;
+  [[nodiscard]] virtual std::int32_t
   CreateBuffer(native::VkDevice device,
                native::VkBufferCreateInfo const &create_info,
                native::VkBuffer &buffer) = 0;
@@ -165,6 +219,59 @@ public:
                                             native::VkQueue &queue) override;
   [[nodiscard]] std::int32_t
   QueueWaitIdle(native::VkDevice device, native::VkQueue queue) override;
+  [[nodiscard]] std::int32_t
+  CreateCommandPool(native::VkDevice device,
+                    native::VkCommandPoolCreateInfo const &create_info,
+                    native::VkCommandPool &command_pool) override;
+  void DestroyCommandPool(native::VkDevice device,
+                          native::VkCommandPool command_pool) override;
+  [[nodiscard]] std::int32_t
+  ResetCommandPool(native::VkDevice device, native::VkCommandPool command_pool,
+                   std::uint32_t flags) override;
+  [[nodiscard]] std::int32_t AllocateCommandBuffers(
+      native::VkDevice device,
+      native::VkCommandBufferAllocateInfo const &allocate_info,
+      std::vector<native::VkCommandBuffer> &command_buffers) override;
+  void FreeCommandBuffers(
+      native::VkDevice device, native::VkCommandPool command_pool,
+      std::vector<native::VkCommandBuffer> const &command_buffers) override;
+  [[nodiscard]] std::int32_t
+  BeginCommandBuffer(native::VkDevice device,
+                     native::VkCommandBuffer command_buffer,
+                     native::VkCommandBufferBeginInfo const &begin_info) override;
+  [[nodiscard]] std::int32_t
+  EndCommandBuffer(native::VkDevice device,
+                   native::VkCommandBuffer command_buffer) override;
+  [[nodiscard]] std::int32_t
+  ResetCommandBuffer(native::VkDevice device,
+                     native::VkCommandBuffer command_buffer,
+                     std::uint32_t flags) override;
+  [[nodiscard]] std::int32_t
+  CreateShaderModule(native::VkDevice device,
+                     native::VkShaderModuleCreateInfo const &create_info,
+                     native::VkShaderModule &shader_module) override;
+  void DestroyShaderModule(native::VkDevice device,
+                           native::VkShaderModule shader_module) override;
+  [[nodiscard]] std::int32_t
+  CreateSemaphore(native::VkDevice device,
+                  native::VkSemaphoreCreateInfo const &create_info,
+                  native::VkSemaphore &semaphore) override;
+  void DestroySemaphore(native::VkDevice device,
+                        native::VkSemaphore semaphore) override;
+  [[nodiscard]] std::int32_t
+  CreateFence(native::VkDevice device,
+              native::VkFenceCreateInfo const &create_info,
+              native::VkFence &fence) override;
+  void DestroyFence(native::VkDevice device, native::VkFence fence) override;
+  [[nodiscard]] std::int32_t GetFenceStatus(native::VkDevice device,
+                                            native::VkFence fence) override;
+  [[nodiscard]] std::int32_t
+  WaitForFences(native::VkDevice device,
+                std::vector<native::VkFence> const &fences, bool wait_all,
+                std::uint64_t timeout_nanoseconds) override;
+  [[nodiscard]] std::int32_t
+  ResetFences(native::VkDevice device,
+              std::vector<native::VkFence> const &fences) override;
   [[nodiscard]] std::int32_t
   CreateBuffer(native::VkDevice device,
                native::VkBufferCreateInfo const &create_info,

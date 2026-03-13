@@ -76,6 +76,21 @@ template <typename T>
 }
 
 template <typename T>
+[[nodiscard]] bool WriteGuestArray(std::uint64_t address,
+                                   std::span<T const> values) {
+  if (values.empty()) {
+    return true;
+  }
+  if (address == 0u) {
+    return false;
+  }
+
+  auto &memory{runtime::PluginContext::Instance().memory()};
+  return memory.Write(kDefaultGuestMemoryIndex, address, values.data(),
+                      sizeof(T) * values.size());
+}
+
+template <typename T>
 [[nodiscard]] std::int32_t WriteGuestBuffer(std::uint64_t buffer_address,
                                             std::uint32_t capacity,
                                             std::uint64_t out_count_address,
@@ -358,6 +373,170 @@ struct BufferCreateStorage {
   return true;
 }
 
+struct ImageCreateStorage {
+  uwvm_vk_image_create_info guest_create_info{};
+  std::vector<std::uint32_t> queue_family_indices{};
+  vk::native::VkImageCreateInfo native_create_info{};
+};
+
+[[nodiscard]] bool BuildImageCreateInfo(std::uint64_t create_info_address,
+                                        ImageCreateStorage &storage) {
+  if (!ReadGuestObject(create_info_address, storage.guest_create_info)) {
+    return false;
+  }
+
+  if (storage.guest_create_info.queue_family_index_count != 0u) {
+    storage.queue_family_indices.resize(
+        storage.guest_create_info.queue_family_index_count);
+    auto &memory{runtime::PluginContext::Instance().memory()};
+    if (storage.guest_create_info.queue_family_indices_address == 0u ||
+        !memory.Read(kDefaultGuestMemoryIndex,
+                     storage.guest_create_info.queue_family_indices_address,
+                     storage.queue_family_indices.data(),
+                     sizeof(std::uint32_t) *
+                         storage.queue_family_indices.size())) {
+      return false;
+    }
+  }
+
+  storage.native_create_info = vk::native::VkImageCreateInfo{
+      .sType = vk::native::VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = storage.guest_create_info.flags,
+      .imageType = static_cast<vk::native::VkImageType>(
+          storage.guest_create_info.image_type),
+      .format = storage.guest_create_info.format,
+      .extent =
+          vk::native::VkExtent3D{
+              .width = storage.guest_create_info.extent.width,
+              .height = storage.guest_create_info.extent.height,
+              .depth = storage.guest_create_info.extent.depth},
+      .mipLevels = storage.guest_create_info.mip_levels,
+      .arrayLayers = storage.guest_create_info.array_layers,
+      .samples = storage.guest_create_info.samples,
+      .tiling = static_cast<vk::native::VkImageTiling>(
+          storage.guest_create_info.tiling),
+      .usage = storage.guest_create_info.usage,
+      .sharingMode = static_cast<vk::native::VkSharingMode>(
+          storage.guest_create_info.sharing_mode),
+      .queueFamilyIndexCount =
+          storage.guest_create_info.queue_family_index_count,
+      .pQueueFamilyIndices = storage.queue_family_indices.empty()
+                                 ? nullptr
+                                 : storage.queue_family_indices.data(),
+      .initialLayout = static_cast<vk::native::VkImageLayout>(
+          storage.guest_create_info.initial_layout)};
+  return true;
+}
+
+[[nodiscard]] bool BuildSemaphoreCreateInfo(
+    std::uint64_t create_info_address,
+    vk::native::VkSemaphoreCreateInfo &create_info) {
+  uwvm_vk_semaphore_create_info guest_create_info{};
+  if (!ReadGuestObject(create_info_address, guest_create_info)) {
+    return false;
+  }
+
+  create_info = vk::native::VkSemaphoreCreateInfo{
+      .sType = vk::native::VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = guest_create_info.flags};
+  return true;
+}
+
+[[nodiscard]] bool BuildFenceCreateInfo(
+    std::uint64_t create_info_address,
+    vk::native::VkFenceCreateInfo &create_info) {
+  uwvm_vk_fence_create_info guest_create_info{};
+  if (!ReadGuestObject(create_info_address, guest_create_info)) {
+    return false;
+  }
+
+  create_info = vk::native::VkFenceCreateInfo{
+      .sType = vk::native::VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = guest_create_info.flags};
+  return true;
+}
+
+[[nodiscard]] bool BuildCommandPoolCreateInfo(
+    std::uint64_t create_info_address,
+    vk::native::VkCommandPoolCreateInfo &create_info) {
+  uwvm_vk_command_pool_create_info guest_create_info{};
+  if (!ReadGuestObject(create_info_address, guest_create_info)) {
+    return false;
+  }
+
+  create_info = vk::native::VkCommandPoolCreateInfo{
+      .sType = vk::native::VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = guest_create_info.flags,
+      .queueFamilyIndex = guest_create_info.queue_family_index};
+  return true;
+}
+
+[[nodiscard]] bool BuildCommandBufferAllocateInfo(
+    std::uint64_t allocate_info_address,
+    uwvm_vk_command_buffer_allocate_info &allocate_info) {
+  return ReadGuestObject(allocate_info_address, allocate_info);
+}
+
+[[nodiscard]] bool BuildCommandBufferBeginInfo(
+    std::uint64_t begin_info_address,
+    vk::native::VkCommandBufferBeginInfo &begin_info) {
+  uwvm_vk_command_buffer_begin_info guest_begin_info{};
+  if (!ReadGuestObject(begin_info_address, guest_begin_info)) {
+    return false;
+  }
+
+  begin_info = vk::native::VkCommandBufferBeginInfo{
+      .sType = vk::native::VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+      .pNext = nullptr,
+      .flags = guest_begin_info.flags,
+      .pInheritanceInfo = nullptr};
+  return true;
+}
+
+struct ShaderModuleCreateStorage {
+  uwvm_vk_shader_module_create_info guest_create_info{};
+  std::vector<std::uint32_t> code_words{};
+  vk::native::VkShaderModuleCreateInfo native_create_info{};
+};
+
+[[nodiscard]] bool BuildShaderModuleCreateInfo(
+    std::uint64_t create_info_address, ShaderModuleCreateStorage &storage) {
+  if (!ReadGuestObject(create_info_address, storage.guest_create_info)) {
+    return false;
+  }
+  if (storage.guest_create_info.code_address == 0u ||
+      storage.guest_create_info.code_size == 0u ||
+      (storage.guest_create_info.code_size % sizeof(std::uint32_t)) != 0u ||
+      storage.guest_create_info.code_size >
+          static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
+    return false;
+  }
+
+  auto const word_count{
+      static_cast<std::size_t>(storage.guest_create_info.code_size /
+                               sizeof(std::uint32_t))};
+  storage.code_words.resize(word_count);
+  auto &memory{runtime::PluginContext::Instance().memory()};
+  if (!memory.Read(kDefaultGuestMemoryIndex, storage.guest_create_info.code_address,
+                   storage.code_words.data(),
+                   static_cast<std::size_t>(
+                       storage.guest_create_info.code_size))) {
+    return false;
+  }
+
+  storage.native_create_info = vk::native::VkShaderModuleCreateInfo{
+      .sType = vk::native::VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = storage.guest_create_info.flags,
+      .codeSize = static_cast<std::size_t>(storage.guest_create_info.code_size),
+      .pCode = storage.code_words.data()};
+  return true;
+}
+
 [[nodiscard]] bool
 BuildMemoryAllocateInfo(std::uint64_t allocate_info_address,
                         vk::native::VkMemoryAllocateInfo &allocate_info) {
@@ -377,6 +556,40 @@ BuildMemoryAllocateInfo(std::uint64_t allocate_info_address,
 [[nodiscard]] bool ReadCopyRegion(std::uint64_t copy_region_address,
                                   uwvm_vk_memory_copy_region &copy_region) {
   return ReadGuestObject(copy_region_address, copy_region);
+}
+
+[[nodiscard]] std::int32_t ResolveFenceList(
+    runtime::PluginContext &context, std::uint64_t device_handle,
+    std::uint64_t fence_handle_buffer_address, std::uint32_t fence_count,
+    std::vector<vk::native::VkFence> &native_fences) {
+  native_fences.clear();
+  if (fence_count == 0u || fence_handle_buffer_address == 0u) {
+    return UWVM_VK_ERROR_INVALID_ARGUMENT;
+  }
+
+  std::vector<std::uint64_t> guest_fences{};
+  if (!ReadGuestArray(fence_handle_buffer_address, fence_count, guest_fences)) {
+    return UWVM_VK_ERROR_GUEST_MEMORY;
+  }
+
+  native_fences.reserve(guest_fences.size());
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  if (device_record == nullptr) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+
+  for (auto const fence_handle : guest_fences) {
+    auto *fence_record{context.fences.Find(fence_handle)};
+    if (fence_record == nullptr ||
+        fence_record->parent_device_handle != device_handle) {
+      native_fences.clear();
+      return UWVM_VK_ERROR_INVALID_HANDLE;
+    }
+    native_fences.push_back(fence_record->native_handle);
+  }
+
+  return UWVM_VK_SUCCESS;
 }
 
 [[nodiscard]] std::int32_t CopyBetweenGuestAndMappedMemory(
@@ -593,6 +806,61 @@ std::int32_t DestroyInstance(std::uint64_t instance_handle) noexcept {
       }
     }
   });
+  context.images.ForEach([&](std::uint64_t handle,
+                             runtime::ImageRecord const &record) {
+    (void)handle;
+    if (device_handles.contains(record.parent_device_handle)) {
+      auto *device_record{context.devices.Find(record.parent_device_handle)};
+      if (device_record != nullptr) {
+        context.backend().DestroyImage(device_record->native_handle,
+                                       record.native_handle);
+      }
+    }
+  });
+  context.semaphores.ForEach([&](std::uint64_t handle,
+                                 runtime::SemaphoreRecord const &record) {
+    (void)handle;
+    if (device_handles.contains(record.parent_device_handle)) {
+      auto *device_record{context.devices.Find(record.parent_device_handle)};
+      if (device_record != nullptr) {
+        context.backend().DestroySemaphore(device_record->native_handle,
+                                           record.native_handle);
+      }
+    }
+  });
+  context.fences.ForEach([&](std::uint64_t handle,
+                             runtime::FenceRecord const &record) {
+    (void)handle;
+    if (device_handles.contains(record.parent_device_handle)) {
+      auto *device_record{context.devices.Find(record.parent_device_handle)};
+      if (device_record != nullptr) {
+        context.backend().DestroyFence(device_record->native_handle,
+                                       record.native_handle);
+      }
+    }
+  });
+  context.command_pools.ForEach([&](std::uint64_t handle,
+                                    runtime::CommandPoolRecord const &record) {
+    (void)handle;
+    if (device_handles.contains(record.parent_device_handle)) {
+      auto *device_record{context.devices.Find(record.parent_device_handle)};
+      if (device_record != nullptr) {
+        context.backend().DestroyCommandPool(device_record->native_handle,
+                                             record.native_handle);
+      }
+    }
+  });
+  context.shader_modules.ForEach(
+      [&](std::uint64_t handle, runtime::ShaderModuleRecord const &record) {
+        (void)handle;
+        if (device_handles.contains(record.parent_device_handle)) {
+          auto *device_record{context.devices.Find(record.parent_device_handle)};
+          if (device_record != nullptr) {
+            context.backend().DestroyShaderModule(device_record->native_handle,
+                                                  record.native_handle);
+          }
+        }
+      });
 
   context.memories.ForEach([&](std::uint64_t handle,
                                runtime::DeviceMemoryRecord const &record) {
@@ -618,7 +886,25 @@ std::int32_t DestroyInstance(std::uint64_t instance_handle) noexcept {
   context.queues.EraseIf([&](auto const &record) {
     return device_handles.contains(record.parent_device_handle);
   });
+  context.command_buffers.EraseIf([&](auto const &record) {
+    return device_handles.contains(record.parent_device_handle);
+  });
+  context.command_pools.EraseIf([&](auto const &record) {
+    return device_handles.contains(record.parent_device_handle);
+  });
+  context.shader_modules.EraseIf([&](auto const &record) {
+    return device_handles.contains(record.parent_device_handle);
+  });
   context.buffers.EraseIf([&](auto const &record) {
+    return device_handles.contains(record.parent_device_handle);
+  });
+  context.images.EraseIf([&](auto const &record) {
+    return device_handles.contains(record.parent_device_handle);
+  });
+  context.semaphores.EraseIf([&](auto const &record) {
+    return device_handles.contains(record.parent_device_handle);
+  });
+  context.fences.EraseIf([&](auto const &record) {
     return device_handles.contains(record.parent_device_handle);
   });
   context.memories.EraseIf([&](auto const &record) {
@@ -887,6 +1173,46 @@ std::int32_t DestroyDevice(std::uint64_t device_handle) noexcept {
                                       record.native_handle);
     }
   });
+  context.images.ForEach([&](std::uint64_t handle,
+                             runtime::ImageRecord const &record) {
+    (void)handle;
+    if (record.parent_device_handle == device_handle) {
+      context.backend().DestroyImage(device_record->native_handle,
+                                     record.native_handle);
+    }
+  });
+  context.semaphores.ForEach([&](std::uint64_t handle,
+                                 runtime::SemaphoreRecord const &record) {
+    (void)handle;
+    if (record.parent_device_handle == device_handle) {
+      context.backend().DestroySemaphore(device_record->native_handle,
+                                         record.native_handle);
+    }
+  });
+  context.fences.ForEach([&](std::uint64_t handle,
+                             runtime::FenceRecord const &record) {
+    (void)handle;
+    if (record.parent_device_handle == device_handle) {
+      context.backend().DestroyFence(device_record->native_handle,
+                                     record.native_handle);
+    }
+  });
+  context.command_pools.ForEach(
+      [&](std::uint64_t handle, runtime::CommandPoolRecord const &record) {
+        (void)handle;
+        if (record.parent_device_handle == device_handle) {
+          context.backend().DestroyCommandPool(device_record->native_handle,
+                                               record.native_handle);
+        }
+      });
+  context.shader_modules.ForEach(
+      [&](std::uint64_t handle, runtime::ShaderModuleRecord const &record) {
+        (void)handle;
+        if (record.parent_device_handle == device_handle) {
+          context.backend().DestroyShaderModule(device_record->native_handle,
+                                                record.native_handle);
+        }
+      });
   context.memories.ForEach([&](std::uint64_t handle,
                                runtime::DeviceMemoryRecord const &record) {
     (void)handle;
@@ -900,7 +1226,25 @@ std::int32_t DestroyDevice(std::uint64_t device_handle) noexcept {
   context.queues.EraseIf([device_handle](auto const &record) {
     return record.parent_device_handle == device_handle;
   });
+  context.command_buffers.EraseIf([device_handle](auto const &record) {
+    return record.parent_device_handle == device_handle;
+  });
+  context.command_pools.EraseIf([device_handle](auto const &record) {
+    return record.parent_device_handle == device_handle;
+  });
+  context.shader_modules.EraseIf([device_handle](auto const &record) {
+    return record.parent_device_handle == device_handle;
+  });
   context.buffers.EraseIf([device_handle](auto const &record) {
+    return record.parent_device_handle == device_handle;
+  });
+  context.images.EraseIf([device_handle](auto const &record) {
+    return record.parent_device_handle == device_handle;
+  });
+  context.semaphores.EraseIf([device_handle](auto const &record) {
+    return record.parent_device_handle == device_handle;
+  });
+  context.fences.EraseIf([device_handle](auto const &record) {
     return record.parent_device_handle == device_handle;
   });
   context.memories.EraseIf([device_handle](auto const &record) {
@@ -971,6 +1315,485 @@ std::int32_t QueueWaitIdle(std::uint64_t queue_handle) noexcept {
 
   return context.backend().QueueWaitIdle(device_record->native_handle,
                                          queue_record->native_handle);
+}
+
+std::int32_t CreateCommandPool(std::uint64_t device_handle,
+                               std::uint64_t create_info_address,
+                               std::uint64_t out_command_pool_address) noexcept {
+  if (create_info_address == 0u || out_command_pool_address == 0u) {
+    return UWVM_VK_ERROR_INVALID_ARGUMENT;
+  }
+
+  vk::native::VkCommandPoolCreateInfo create_info{};
+  if (!BuildCommandPoolCreateInfo(create_info_address, create_info)) {
+    return UWVM_VK_ERROR_GUEST_MEMORY;
+  }
+
+  auto &context{runtime::PluginContext::Instance()};
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  if (device_record == nullptr) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+
+  vk::native::VkCommandPool native_command_pool{};
+  auto result{context.backend().CreateCommandPool(
+      device_record->native_handle, create_info, native_command_pool)};
+  if (result != UWVM_VK_SUCCESS) {
+    return result;
+  }
+
+  auto const handle{context.command_pools.Insert(runtime::CommandPoolRecord{
+      .native_handle = native_command_pool,
+      .parent_device_handle = device_handle,
+      .queue_family_index = create_info.queueFamilyIndex})};
+  if (!WriteGuestObject(out_command_pool_address, handle)) {
+    context.command_pools.Erase(handle);
+    context.backend().DestroyCommandPool(device_record->native_handle,
+                                         native_command_pool);
+    return UWVM_VK_ERROR_GUEST_MEMORY;
+  }
+  return UWVM_VK_SUCCESS;
+}
+
+std::int32_t DestroyCommandPool(std::uint64_t device_handle,
+                                std::uint64_t command_pool_handle) noexcept {
+  auto &context{runtime::PluginContext::Instance()};
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  auto *command_pool_record{context.command_pools.Find(command_pool_handle)};
+  if (device_record == nullptr || command_pool_record == nullptr ||
+      command_pool_record->parent_device_handle != device_handle) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+
+  context.backend().DestroyCommandPool(device_record->native_handle,
+                                       command_pool_record->native_handle);
+  context.command_buffers.EraseIf([command_pool_handle](auto const &record) {
+    return record.parent_command_pool_handle == command_pool_handle;
+  });
+  context.command_pools.Erase(command_pool_handle);
+  return UWVM_VK_SUCCESS;
+}
+
+std::int32_t ResetCommandPool(std::uint64_t device_handle,
+                              std::uint64_t command_pool_handle,
+                              std::uint32_t flags) noexcept {
+  auto &context{runtime::PluginContext::Instance()};
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  auto *command_pool_record{context.command_pools.Find(command_pool_handle)};
+  if (device_record == nullptr || command_pool_record == nullptr ||
+      command_pool_record->parent_device_handle != device_handle) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+
+  return context.backend().ResetCommandPool(device_record->native_handle,
+                                            command_pool_record->native_handle,
+                                            flags);
+}
+
+std::int32_t AllocateCommandBuffers(
+    std::uint64_t device_handle, std::uint64_t allocate_info_address,
+    std::uint64_t out_command_buffer_buffer_address) noexcept {
+  if (allocate_info_address == 0u || out_command_buffer_buffer_address == 0u) {
+    return UWVM_VK_ERROR_INVALID_ARGUMENT;
+  }
+
+  uwvm_vk_command_buffer_allocate_info guest_allocate_info{};
+  if (!BuildCommandBufferAllocateInfo(allocate_info_address,
+                                      guest_allocate_info)) {
+    return UWVM_VK_ERROR_GUEST_MEMORY;
+  }
+  if (guest_allocate_info.command_pool_handle == 0u ||
+      guest_allocate_info.command_buffer_count == 0u) {
+    return UWVM_VK_ERROR_INVALID_ARGUMENT;
+  }
+
+  auto &context{runtime::PluginContext::Instance()};
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  auto *command_pool_record{
+      context.command_pools.Find(guest_allocate_info.command_pool_handle)};
+  if (device_record == nullptr || command_pool_record == nullptr ||
+      command_pool_record->parent_device_handle != device_handle) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+
+  vk::native::VkCommandBufferAllocateInfo allocate_info{
+      .sType = vk::native::VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+      .pNext = nullptr,
+      .commandPool = command_pool_record->native_handle,
+      .level = static_cast<vk::native::VkCommandBufferLevel>(
+          guest_allocate_info.level),
+      .commandBufferCount = guest_allocate_info.command_buffer_count};
+
+  std::vector<vk::native::VkCommandBuffer> native_command_buffers{};
+  auto result{context.backend().AllocateCommandBuffers(
+      device_record->native_handle, allocate_info, native_command_buffers)};
+  if (result != UWVM_VK_SUCCESS) {
+    return result;
+  }
+  if (native_command_buffers.size() !=
+      guest_allocate_info.command_buffer_count) {
+    context.backend().FreeCommandBuffers(device_record->native_handle,
+                                         command_pool_record->native_handle,
+                                         native_command_buffers);
+    return UWVM_VK_ERROR_UNKNOWN;
+  }
+
+  std::vector<std::uint64_t> guest_command_buffer_handles{};
+  guest_command_buffer_handles.reserve(native_command_buffers.size());
+  for (auto const native_command_buffer : native_command_buffers) {
+    guest_command_buffer_handles.push_back(
+        context.command_buffers.Insert(runtime::CommandBufferRecord{
+            .native_handle = native_command_buffer,
+            .parent_device_handle = device_handle,
+            .parent_command_pool_handle =
+                guest_allocate_info.command_pool_handle,
+            .level = guest_allocate_info.level}));
+  }
+
+  if (!WriteGuestArray(
+          out_command_buffer_buffer_address,
+          std::span<std::uint64_t const>{guest_command_buffer_handles.data(),
+                                         guest_command_buffer_handles.size()})) {
+    for (auto const handle : guest_command_buffer_handles) {
+      context.command_buffers.Erase(handle);
+    }
+    context.backend().FreeCommandBuffers(device_record->native_handle,
+                                         command_pool_record->native_handle,
+                                         native_command_buffers);
+    return UWVM_VK_ERROR_GUEST_MEMORY;
+  }
+  return UWVM_VK_SUCCESS;
+}
+
+std::int32_t FreeCommandBuffers(
+    std::uint64_t device_handle, std::uint64_t command_pool_handle,
+    std::uint64_t command_buffer_handle_buffer_address,
+    std::uint32_t command_buffer_count) noexcept {
+  if (command_pool_handle == 0u || command_buffer_handle_buffer_address == 0u ||
+      command_buffer_count == 0u) {
+    return UWVM_VK_ERROR_INVALID_ARGUMENT;
+  }
+
+  std::vector<std::uint64_t> guest_command_buffer_handles{};
+  if (!ReadGuestArray(command_buffer_handle_buffer_address, command_buffer_count,
+                      guest_command_buffer_handles)) {
+    return UWVM_VK_ERROR_GUEST_MEMORY;
+  }
+
+  auto &context{runtime::PluginContext::Instance()};
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  auto *command_pool_record{context.command_pools.Find(command_pool_handle)};
+  if (device_record == nullptr || command_pool_record == nullptr ||
+      command_pool_record->parent_device_handle != device_handle) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+
+  std::vector<vk::native::VkCommandBuffer> native_command_buffers{};
+  native_command_buffers.reserve(guest_command_buffer_handles.size());
+  for (auto const command_buffer_handle : guest_command_buffer_handles) {
+    auto *command_buffer_record{
+        context.command_buffers.Find(command_buffer_handle)};
+    if (command_buffer_record == nullptr ||
+        command_buffer_record->parent_device_handle != device_handle ||
+        command_buffer_record->parent_command_pool_handle !=
+            command_pool_handle) {
+      return UWVM_VK_ERROR_INVALID_HANDLE;
+    }
+    native_command_buffers.push_back(command_buffer_record->native_handle);
+  }
+
+  context.backend().FreeCommandBuffers(device_record->native_handle,
+                                       command_pool_record->native_handle,
+                                       native_command_buffers);
+  for (auto const command_buffer_handle : guest_command_buffer_handles) {
+    context.command_buffers.Erase(command_buffer_handle);
+  }
+  return UWVM_VK_SUCCESS;
+}
+
+std::int32_t BeginCommandBuffer(std::uint64_t device_handle,
+                                std::uint64_t command_buffer_handle,
+                                std::uint64_t begin_info_address) noexcept {
+  if (begin_info_address == 0u) {
+    return UWVM_VK_ERROR_INVALID_ARGUMENT;
+  }
+
+  vk::native::VkCommandBufferBeginInfo begin_info{};
+  if (!BuildCommandBufferBeginInfo(begin_info_address, begin_info)) {
+    return UWVM_VK_ERROR_GUEST_MEMORY;
+  }
+  if ((begin_info.flags &
+       UWVM_VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT) != 0u) {
+    return UWVM_VK_ERROR_UNSUPPORTED_OPERATION;
+  }
+
+  auto &context{runtime::PluginContext::Instance()};
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  auto *command_buffer_record{context.command_buffers.Find(command_buffer_handle)};
+  if (device_record == nullptr || command_buffer_record == nullptr ||
+      command_buffer_record->parent_device_handle != device_handle) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+  if (command_buffer_record->level != UWVM_VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
+    return UWVM_VK_ERROR_UNSUPPORTED_OPERATION;
+  }
+
+  return context.backend().BeginCommandBuffer(device_record->native_handle,
+                                              command_buffer_record->native_handle,
+                                              begin_info);
+}
+
+std::int32_t EndCommandBuffer(std::uint64_t device_handle,
+                              std::uint64_t command_buffer_handle) noexcept {
+  auto &context{runtime::PluginContext::Instance()};
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  auto *command_buffer_record{context.command_buffers.Find(command_buffer_handle)};
+  if (device_record == nullptr || command_buffer_record == nullptr ||
+      command_buffer_record->parent_device_handle != device_handle) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+
+  return context.backend().EndCommandBuffer(device_record->native_handle,
+                                            command_buffer_record->native_handle);
+}
+
+std::int32_t ResetCommandBuffer(std::uint64_t device_handle,
+                                std::uint64_t command_buffer_handle,
+                                std::uint32_t flags) noexcept {
+  auto &context{runtime::PluginContext::Instance()};
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  auto *command_buffer_record{context.command_buffers.Find(command_buffer_handle)};
+  if (device_record == nullptr || command_buffer_record == nullptr ||
+      command_buffer_record->parent_device_handle != device_handle) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+
+  return context.backend().ResetCommandBuffer(device_record->native_handle,
+                                              command_buffer_record->native_handle,
+                                              flags);
+}
+
+std::int32_t CreateShaderModule(std::uint64_t device_handle,
+                                std::uint64_t create_info_address,
+                                std::uint64_t out_shader_module_address) noexcept {
+  if (create_info_address == 0u || out_shader_module_address == 0u) {
+    return UWVM_VK_ERROR_INVALID_ARGUMENT;
+  }
+
+  ShaderModuleCreateStorage storage{};
+  if (!BuildShaderModuleCreateInfo(create_info_address, storage)) {
+    return UWVM_VK_ERROR_GUEST_MEMORY;
+  }
+
+  auto &context{runtime::PluginContext::Instance()};
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  if (device_record == nullptr) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+
+  vk::native::VkShaderModule native_shader_module{};
+  auto result{context.backend().CreateShaderModule(
+      device_record->native_handle, storage.native_create_info,
+      native_shader_module)};
+  if (result != UWVM_VK_SUCCESS) {
+    return result;
+  }
+
+  auto const handle{context.shader_modules.Insert(runtime::ShaderModuleRecord{
+      .native_handle = native_shader_module,
+      .parent_device_handle = device_handle})};
+  return WriteGuestObject(out_shader_module_address, handle)
+             ? UWVM_VK_SUCCESS
+             : UWVM_VK_ERROR_GUEST_MEMORY;
+}
+
+std::int32_t DestroyShaderModule(std::uint64_t device_handle,
+                                 std::uint64_t shader_module_handle) noexcept {
+  auto &context{runtime::PluginContext::Instance()};
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  auto *shader_module_record{context.shader_modules.Find(shader_module_handle)};
+  if (device_record == nullptr || shader_module_record == nullptr ||
+      shader_module_record->parent_device_handle != device_handle) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+
+  context.backend().DestroyShaderModule(device_record->native_handle,
+                                        shader_module_record->native_handle);
+  context.shader_modules.Erase(shader_module_handle);
+  return UWVM_VK_SUCCESS;
+}
+
+std::int32_t CreateSemaphore(std::uint64_t device_handle,
+                             std::uint64_t create_info_address,
+                             std::uint64_t out_semaphore_address) noexcept {
+  if (create_info_address == 0u || out_semaphore_address == 0u) {
+    return UWVM_VK_ERROR_INVALID_ARGUMENT;
+  }
+
+  vk::native::VkSemaphoreCreateInfo create_info{};
+  if (!BuildSemaphoreCreateInfo(create_info_address, create_info)) {
+    return UWVM_VK_ERROR_GUEST_MEMORY;
+  }
+
+  auto &context{runtime::PluginContext::Instance()};
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  if (device_record == nullptr) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+
+  vk::native::VkSemaphore native_semaphore{};
+  auto result{context.backend().CreateSemaphore(device_record->native_handle,
+                                                create_info,
+                                                native_semaphore)};
+  if (result != UWVM_VK_SUCCESS) {
+    return result;
+  }
+
+  auto const handle{context.semaphores.Insert(runtime::SemaphoreRecord{
+      .native_handle = native_semaphore, .parent_device_handle = device_handle})};
+  return WriteGuestObject(out_semaphore_address, handle)
+             ? UWVM_VK_SUCCESS
+             : UWVM_VK_ERROR_GUEST_MEMORY;
+}
+
+std::int32_t DestroySemaphore(std::uint64_t device_handle,
+                              std::uint64_t semaphore_handle) noexcept {
+  auto &context{runtime::PluginContext::Instance()};
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  auto *semaphore_record{context.semaphores.Find(semaphore_handle)};
+  if (device_record == nullptr || semaphore_record == nullptr ||
+      semaphore_record->parent_device_handle != device_handle) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+
+  context.backend().DestroySemaphore(device_record->native_handle,
+                                     semaphore_record->native_handle);
+  context.semaphores.Erase(semaphore_handle);
+  return UWVM_VK_SUCCESS;
+}
+
+std::int32_t CreateFence(std::uint64_t device_handle,
+                         std::uint64_t create_info_address,
+                         std::uint64_t out_fence_address) noexcept {
+  if (create_info_address == 0u || out_fence_address == 0u) {
+    return UWVM_VK_ERROR_INVALID_ARGUMENT;
+  }
+
+  vk::native::VkFenceCreateInfo create_info{};
+  if (!BuildFenceCreateInfo(create_info_address, create_info)) {
+    return UWVM_VK_ERROR_GUEST_MEMORY;
+  }
+
+  auto &context{runtime::PluginContext::Instance()};
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  if (device_record == nullptr) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+
+  vk::native::VkFence native_fence{};
+  auto result{
+      context.backend().CreateFence(device_record->native_handle, create_info,
+                                    native_fence)};
+  if (result != UWVM_VK_SUCCESS) {
+    return result;
+  }
+
+  auto const handle{context.fences.Insert(runtime::FenceRecord{
+      .native_handle = native_fence, .parent_device_handle = device_handle})};
+  return WriteGuestObject(out_fence_address, handle)
+             ? UWVM_VK_SUCCESS
+             : UWVM_VK_ERROR_GUEST_MEMORY;
+}
+
+std::int32_t DestroyFence(std::uint64_t device_handle,
+                          std::uint64_t fence_handle) noexcept {
+  auto &context{runtime::PluginContext::Instance()};
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  auto *fence_record{context.fences.Find(fence_handle)};
+  if (device_record == nullptr || fence_record == nullptr ||
+      fence_record->parent_device_handle != device_handle) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+
+  context.backend().DestroyFence(device_record->native_handle,
+                                 fence_record->native_handle);
+  context.fences.Erase(fence_handle);
+  return UWVM_VK_SUCCESS;
+}
+
+std::int32_t GetFenceStatus(std::uint64_t device_handle,
+                            std::uint64_t fence_handle) noexcept {
+  auto &context{runtime::PluginContext::Instance()};
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  auto *fence_record{context.fences.Find(fence_handle)};
+  if (device_record == nullptr || fence_record == nullptr ||
+      fence_record->parent_device_handle != device_handle) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+
+  return context.backend().GetFenceStatus(device_record->native_handle,
+                                          fence_record->native_handle);
+}
+
+std::int32_t WaitForFences(std::uint64_t device_handle,
+                           std::uint64_t fence_handle_buffer_address,
+                           std::uint32_t fence_count, std::uint32_t wait_all,
+                           std::uint64_t timeout_nanoseconds) noexcept {
+  auto &context{runtime::PluginContext::Instance()};
+  std::vector<vk::native::VkFence> native_fences{};
+  auto result{ResolveFenceList(context, device_handle,
+                               fence_handle_buffer_address, fence_count,
+                               native_fences)};
+  if (result != UWVM_VK_SUCCESS) {
+    return result;
+  }
+
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  if (device_record == nullptr) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+
+  return context.backend().WaitForFences(device_record->native_handle,
+                                         native_fences, wait_all != 0u,
+                                         timeout_nanoseconds);
+}
+
+std::int32_t ResetFences(std::uint64_t device_handle,
+                         std::uint64_t fence_handle_buffer_address,
+                         std::uint32_t fence_count) noexcept {
+  auto &context{runtime::PluginContext::Instance()};
+  std::vector<vk::native::VkFence> native_fences{};
+  auto result{ResolveFenceList(context, device_handle,
+                               fence_handle_buffer_address, fence_count,
+                               native_fences)};
+  if (result != UWVM_VK_SUCCESS) {
+    return result;
+  }
+
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  if (device_record == nullptr) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+
+  return context.backend().ResetFences(device_record->native_handle,
+                                       native_fences);
 }
 
 std::int32_t CreateBuffer(std::uint64_t device_handle,
@@ -1053,6 +1876,85 @@ GetBufferMemoryRequirements(std::uint64_t device_handle,
              : UWVM_VK_ERROR_GUEST_MEMORY;
 }
 
+std::int32_t CreateImage(std::uint64_t device_handle,
+                         std::uint64_t create_info_address,
+                         std::uint64_t out_image_address) noexcept {
+  if (create_info_address == 0u || out_image_address == 0u) {
+    return UWVM_VK_ERROR_INVALID_ARGUMENT;
+  }
+
+  ImageCreateStorage storage{};
+  if (!BuildImageCreateInfo(create_info_address, storage)) {
+    return UWVM_VK_ERROR_GUEST_MEMORY;
+  }
+
+  auto &context{runtime::PluginContext::Instance()};
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  if (device_record == nullptr) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+
+  vk::native::VkImage native_image{};
+  auto result{context.backend().CreateImage(
+      device_record->native_handle, storage.native_create_info, native_image)};
+  if (result != UWVM_VK_SUCCESS) {
+    return result;
+  }
+
+  auto const handle{context.images.Insert(runtime::ImageRecord{
+      .native_handle = native_image, .parent_device_handle = device_handle})};
+  return WriteGuestObject(out_image_address, handle)
+             ? UWVM_VK_SUCCESS
+             : UWVM_VK_ERROR_GUEST_MEMORY;
+}
+
+std::int32_t DestroyImage(std::uint64_t device_handle,
+                          std::uint64_t image_handle) noexcept {
+  auto &context{runtime::PluginContext::Instance()};
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  auto *image_record{context.images.Find(image_handle)};
+  if (device_record == nullptr || image_record == nullptr ||
+      image_record->parent_device_handle != device_handle) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+
+  context.backend().DestroyImage(device_record->native_handle,
+                                 image_record->native_handle);
+  context.images.Erase(image_handle);
+  return UWVM_VK_SUCCESS;
+}
+
+std::int32_t
+GetImageMemoryRequirements(std::uint64_t device_handle,
+                           std::uint64_t image_handle,
+                           std::uint64_t out_requirements_address) noexcept {
+  if (out_requirements_address == 0u) {
+    return UWVM_VK_ERROR_INVALID_ARGUMENT;
+  }
+
+  auto &context{runtime::PluginContext::Instance()};
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  auto *image_record{context.images.Find(image_handle)};
+  if (device_record == nullptr || image_record == nullptr ||
+      image_record->parent_device_handle != device_handle) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+
+  uwvm_vk_memory_requirements requirements{};
+  auto result{context.backend().GetImageMemoryRequirements(
+      device_record->native_handle, image_record->native_handle, requirements)};
+  if (result != UWVM_VK_SUCCESS) {
+    return result;
+  }
+
+  return WriteGuestObject(out_requirements_address, requirements)
+             ? UWVM_VK_SUCCESS
+             : UWVM_VK_ERROR_GUEST_MEMORY;
+}
+
 std::int32_t AllocateMemory(std::uint64_t device_handle,
                             std::uint64_t allocate_info_address,
                             std::uint64_t out_memory_address) noexcept {
@@ -1124,6 +2026,27 @@ std::int32_t BindBufferMemory(std::uint64_t device_handle,
 
   return context.backend().BindBufferMemory(
       device_record->native_handle, buffer_record->native_handle,
+      memory_record->native_handle, offset);
+}
+
+std::int32_t BindImageMemory(std::uint64_t device_handle,
+                             std::uint64_t image_handle,
+                             std::uint64_t memory_handle,
+                             std::uint64_t offset) noexcept {
+  auto &context{runtime::PluginContext::Instance()};
+  std::scoped_lock lock{context.mutex()};
+  auto *device_record{context.devices.Find(device_handle)};
+  auto *image_record{context.images.Find(image_handle)};
+  auto *memory_record{context.memories.Find(memory_handle)};
+  if (device_record == nullptr || image_record == nullptr ||
+      memory_record == nullptr ||
+      image_record->parent_device_handle != device_handle ||
+      memory_record->parent_device_handle != device_handle) {
+    return UWVM_VK_ERROR_INVALID_HANDLE;
+  }
+
+  return context.backend().BindImageMemory(
+      device_record->native_handle, image_record->native_handle,
       memory_record->native_handle, offset);
 }
 

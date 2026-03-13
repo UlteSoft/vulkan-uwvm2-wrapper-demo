@@ -36,13 +36,19 @@ struct VkInstance_T;
 struct VkPhysicalDevice_T;
 struct VkDevice_T;
 struct VkQueue_T;
+struct VkCommandBuffer_T;
 
 using VkInstance = VkInstance_T *;
 using VkPhysicalDevice = VkPhysicalDevice_T *;
 using VkDevice = VkDevice_T *;
 using VkQueue = VkQueue_T *;
+using VkCommandBuffer = VkCommandBuffer_T *;
 using VkBuffer = std::uint64_t;
 using VkImage = std::uint64_t;
+using VkSemaphore = std::uint64_t;
+using VkFence = std::uint64_t;
+using VkCommandPool = std::uint64_t;
+using VkShaderModule = std::uint64_t;
 using VkDeviceMemory = std::uint64_t;
 using VkFormat = std::uint32_t;
 using VkSampleCountFlagBits = std::uint32_t;
@@ -59,9 +65,15 @@ enum VkStructureType : std::uint32_t {
   VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO = 2,
   VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO = 3,
   VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE = 6,
+  VK_STRUCTURE_TYPE_FENCE_CREATE_INFO = 8,
+  VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO = 9,
   VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO = 12,
   VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO = 14,
-  VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO = 17
+  VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO = 16,
+  VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO = 5,
+  VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO = 39,
+  VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO = 40,
+  VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO = 42
 };
 
 enum VkSharingMode : std::uint32_t {
@@ -84,6 +96,11 @@ enum VkImageLayout : std::uint32_t {
   VK_IMAGE_LAYOUT_UNDEFINED = 0,
   VK_IMAGE_LAYOUT_GENERAL = 1,
   VK_IMAGE_LAYOUT_PREINITIALIZED = 8
+};
+
+enum VkCommandBufferLevel : std::uint32_t {
+  VK_COMMAND_BUFFER_LEVEL_PRIMARY = 0,
+  VK_COMMAND_BUFFER_LEVEL_SECONDARY = 1
 };
 
 struct VkApplicationInfo {
@@ -208,6 +225,48 @@ struct VkImageCreateInfo {
   VkImageLayout initialLayout;
 };
 
+struct VkSemaphoreCreateInfo {
+  VkStructureType sType;
+  void const *pNext;
+  VkFlags flags;
+};
+
+struct VkFenceCreateInfo {
+  VkStructureType sType;
+  void const *pNext;
+  VkFlags flags;
+};
+
+struct VkCommandPoolCreateInfo {
+  VkStructureType sType;
+  void const *pNext;
+  VkFlags flags;
+  std::uint32_t queueFamilyIndex;
+};
+
+struct VkCommandBufferAllocateInfo {
+  VkStructureType sType;
+  void const *pNext;
+  VkCommandPool commandPool;
+  VkCommandBufferLevel level;
+  std::uint32_t commandBufferCount;
+};
+
+struct VkCommandBufferBeginInfo {
+  VkStructureType sType;
+  void const *pNext;
+  VkFlags flags;
+  void const *pInheritanceInfo;
+};
+
+struct VkShaderModuleCreateInfo {
+  VkStructureType sType;
+  void const *pNext;
+  VkFlags flags;
+  std::size_t codeSize;
+  std::uint32_t const *pCode;
+};
+
 struct VkMemoryRequirements {
   VkDeviceSize size;
   VkDeviceSize alignment;
@@ -261,6 +320,40 @@ using PFN_vkDeviceWaitIdle = VkResult (*)(VkDevice);
 using PFN_vkGetDeviceQueue = void (*)(VkDevice, std::uint32_t, std::uint32_t,
                                       VkQueue *);
 using PFN_vkQueueWaitIdle = VkResult (*)(VkQueue);
+using PFN_vkCreateSemaphore = VkResult (*)(VkDevice,
+                                           VkSemaphoreCreateInfo const *,
+                                           void const *, VkSemaphore *);
+using PFN_vkDestroySemaphore = void (*)(VkDevice, VkSemaphore, void const *);
+using PFN_vkCreateFence = VkResult (*)(VkDevice, VkFenceCreateInfo const *,
+                                       void const *, VkFence *);
+using PFN_vkDestroyFence = void (*)(VkDevice, VkFence, void const *);
+using PFN_vkGetFenceStatus = VkResult (*)(VkDevice, VkFence);
+using PFN_vkWaitForFences = VkResult (*)(VkDevice, std::uint32_t,
+                                         VkFence const *, VkBool32,
+                                         std::uint64_t);
+using PFN_vkResetFences = VkResult (*)(VkDevice, std::uint32_t,
+                                       VkFence const *);
+using PFN_vkCreateCommandPool =
+    VkResult (*)(VkDevice, VkCommandPoolCreateInfo const *, void const *,
+                 VkCommandPool *);
+using PFN_vkDestroyCommandPool = void (*)(VkDevice, VkCommandPool,
+                                          void const *);
+using PFN_vkResetCommandPool = VkResult (*)(VkDevice, VkCommandPool, VkFlags);
+using PFN_vkAllocateCommandBuffers =
+    VkResult (*)(VkDevice, VkCommandBufferAllocateInfo const *,
+                 VkCommandBuffer *);
+using PFN_vkFreeCommandBuffers = void (*)(VkDevice, VkCommandPool,
+                                          std::uint32_t,
+                                          VkCommandBuffer const *);
+using PFN_vkBeginCommandBuffer =
+    VkResult (*)(VkCommandBuffer, VkCommandBufferBeginInfo const *);
+using PFN_vkEndCommandBuffer = VkResult (*)(VkCommandBuffer);
+using PFN_vkResetCommandBuffer = VkResult (*)(VkCommandBuffer, VkFlags);
+using PFN_vkCreateShaderModule =
+    VkResult (*)(VkDevice, VkShaderModuleCreateInfo const *, void const *,
+                 VkShaderModule *);
+using PFN_vkDestroyShaderModule = void (*)(VkDevice, VkShaderModule,
+                                           void const *);
 using PFN_vkCreateBuffer = VkResult (*)(VkDevice, VkBufferCreateInfo const *,
                                         void const *, VkBuffer *);
 using PFN_vkDestroyBuffer = void (*)(VkDevice, VkBuffer, void const *);

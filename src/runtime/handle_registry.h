@@ -97,6 +97,34 @@ struct QueueRecord {
   std::uint32_t queue_index{};
 };
 
+struct CommandPoolRecord {
+  vk::native::VkCommandPool native_handle{};
+  std::uint64_t parent_device_handle{};
+  std::uint32_t queue_family_index{};
+};
+
+struct CommandBufferRecord {
+  vk::native::VkCommandBuffer native_handle{};
+  std::uint64_t parent_device_handle{};
+  std::uint64_t parent_command_pool_handle{};
+  std::uint32_t level{};
+};
+
+struct ShaderModuleRecord {
+  vk::native::VkShaderModule native_handle{};
+  std::uint64_t parent_device_handle{};
+};
+
+struct SemaphoreRecord {
+  vk::native::VkSemaphore native_handle{};
+  std::uint64_t parent_device_handle{};
+};
+
+struct FenceRecord {
+  vk::native::VkFence native_handle{};
+  std::uint64_t parent_device_handle{};
+};
+
 struct BufferRecord {
   vk::native::VkBuffer native_handle{};
   std::uint64_t parent_device_handle{};
